@@ -7,10 +7,13 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName?: string, role?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isGuide: boolean;
+  profile: any | null;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,11 +23,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isGuide, setIsGuide] = useState(false);
+  const [profile, setProfile] = useState<any | null>(null);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*, guide_applications(status)')
+        .eq('id', userId)
+        .single();
+      
+      if (profileData) {
+        setProfile(profileData);
+        setIsGuide(profileData.role === 'guide' || profileData.role === 'Guide');
+        
+        // Also check admin status via role or rpc
+        const { data: adminData } = await supabase.rpc('is_admin', { _user_id: userId });
+        setIsAdmin(!!adminData || profileData.role === 'admin');
+      }
+    } catch (err) {
+      logger.error('Error fetching profile:', err);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
 
-    // Set up auth state listener FIRST - wrapped in try-catch to prevent crashes
     try {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
@@ -34,34 +59,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(session?.user ?? null);
 
           if (session?.user) {
-            // Use setTimeout to avoid Supabase auth deadlock
-            setTimeout(async () => {
-              if (!isMounted) return;
-              try {
-                const { data } = await supabase.rpc('is_admin', { _user_id: session.user.id });
-                if (isMounted) setIsAdmin(!!data);
-              } catch {
-                if (isMounted) setIsAdmin(false);
-              }
-              if (isMounted) setLoading(false);
-            }, 0);
+            await fetchProfile(session.user.id);
+            if (isMounted) setLoading(false);
           } else {
+            setProfile(null);
             setIsAdmin(false);
+            setIsGuide(false);
             setLoading(false);
           }
         }
       );
 
-      // THEN check for existing session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!isMounted) return;
         if (session) {
           setSession(session);
           setUser(session.user);
+          fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
         }
-        // Don't set loading false here - let onAuthStateChange handle it
       }).catch(() => {
-        // Handle session fetch error silently
         if (isMounted) setLoading(false);
       });
 
@@ -70,33 +88,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         subscription.unsubscribe();
       };
     } catch (error) {
-      // If Supabase fails (e.g., rate limit), still allow app to load
       logger.warn('Auth initialization failed:', error);
       if (isMounted) setLoading(false);
     }
   }, []);
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, role: string = 'traveller') => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin === 'http://localhost:8080' 
-            ? 'http://localhost:8080/auth'
-            : 'https://go-nepal.vercel.app/auth',
+          emailRedirectTo: window.location.origin + '/auth',
           data: {
             full_name: fullName || '',
-            role: 'Tourist',
+            role: role,
           },
         },
       });
 
-      logger.log('Signup response:', { data, error });
-
       return { error };
     } catch (error) {
-      logger.error('Signup error:', error);
       return { error: error as Error };
     }
   };
@@ -117,11 +129,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setProfile(null);
     setIsAdmin(false);
+    setIsGuide(false);
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, isAdmin }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      signUp, 
+      signIn, 
+      signOut, 
+      isAdmin, 
+      isGuide, 
+      profile,
+      refreshProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -134,3 +165,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

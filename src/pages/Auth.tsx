@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Mail, Lock, User, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Eye, EyeOff, Mail, Lock, User, Loader2, ArrowLeft, ChevronRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -13,21 +12,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getSafeErrorMessage } from '@/utils/errorUtils';
-import gonepallogo from '@/assets/gonepallogo.png';
 
-// Validation schemas
 const loginSchema = z.object({
-  email: z.string().trim().email({ message: 'Please enter a valid email' }).max(255),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }).max(128),
+  email: z.string().trim().email({ message: 'Valid email is required' }),
+  password: z.string().min(1, { message: 'Password is required' }),
 });
 
 const signupSchema = z.object({
-  fullName: z.string().trim().min(2, { message: 'Name must be at least 2 characters' }).max(100),
-  email: z.string().trim().email({ message: 'Please enter a valid email' }).max(255),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }).max(128)
-    .regex(/[A-Z]/, { message: 'Password must contain an uppercase letter' })
-    .regex(/[a-z]/, { message: 'Password must contain a lowercase letter' })
-    .regex(/[0-9]/, { message: 'Password must contain a number' }),
+  fullName: z.string().trim().min(2, { message: 'Full name is required' }),
+  email: z.string().trim().email({ message: 'Valid email is required' }),
+  password: z.string().min(8, { message: 'Min 8 characters' })
+    .regex(/[A-Z]/, { message: 'Uppercase required' })
+    .regex(/[0-9]/, { message: 'Number required' }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -39,107 +35,16 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [authRole, setAuthRole] = useState<'traveller' | 'guide'>('traveller');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [confirmationStatus, setConfirmationStatus] = useState<'success' | 'error' | null>(null);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { signIn, signUp } = useAuth();
-
-  // Handle email confirmation on page load
-  useEffect(() => {
-    const handleEmailConfirmation = async () => {
-      // Check for token in query params (Supabase older flow)
-      const token = searchParams.get('token');
-      const type = searchParams.get('type');
-      const email = searchParams.get('email');
-
-      // Check for token in hash fragment (Supabase newer flow)
-      const hashParams = new URLSearchParams(location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-
-      if (accessToken && refreshToken) {
-        // Handle hash-based confirmation (newer Supabase flow)
-        setIsConfirming(true);
-        try {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (error) {
-            setConfirmationStatus('error');
-            toast({
-              variant: 'destructive',
-              title: 'Confirmation failed',
-              description: error.message,
-            });
-          } else {
-            setConfirmationStatus('success');
-            toast({
-              title: 'Email confirmed!',
-              description: 'Your account has been successfully verified.',
-            });
-            // Redirect to home after a short delay
-            setTimeout(() => navigate('/'), 2000);
-          }
-        } catch (err) {
-          setConfirmationStatus('error');
-          toast({
-            variant: 'destructive',
-            title: 'Confirmation failed',
-            description: 'An unexpected error occurred.',
-          });
-        } finally {
-          setIsConfirming(false);
-        }
-      } else if (token && type) {
-        // Handle query parameter confirmation (older Supabase flow)
-        setIsConfirming(true);
-        try {
-          const { error } = await supabase.auth.verifyOtp({
-            token,
-            type: type as 'signup' | 'email_change' | 'recovery' | 'magiclink',
-            email: email || undefined,
-          });
-
-          if (error) {
-            setConfirmationStatus('error');
-            toast({
-              variant: 'destructive',
-              title: 'Confirmation failed',
-              description: error.message,
-            });
-          } else {
-            setConfirmationStatus('success');
-            toast({
-              title: 'Email confirmed!',
-              description: 'Your account has been successfully verified.',
-            });
-            // Redirect to home after a short delay
-            setTimeout(() => navigate('/'), 2000);
-          }
-        } catch (err) {
-          setConfirmationStatus('error');
-          toast({
-            variant: 'destructive',
-            title: 'Confirmation failed',
-            description: 'An unexpected error occurred.',
-          });
-        } finally {
-          setIsConfirming(false);
-        }
-      }
-    };
-
-    handleEmailConfirmation();
-  }, [searchParams, location, navigate, toast]);
-
+  
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
@@ -155,451 +60,178 @@ const Auth = () => {
     try {
       const { error } = await signIn(data.email, data.password);
       if (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Login failed',
-          description: getSafeErrorMessage(error),
-        });
+        toast({ variant: 'destructive', title: 'Sign In Failed', description: getSafeErrorMessage(error) });
       } else {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
-        navigate('/');
+        setTimeout(async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profileCheck } = await (supabase.from('profiles' as any) as any).select('*, guide_applications(status)').eq('id', user.id).single();
+            const role = (profileCheck as any)?.role?.toLowerCase();
+            if (role === 'guide') {
+              const kycStatus = profileCheck?.guide_applications?.[0]?.status;
+              if (!kycStatus) navigate('/guide/kyc');
+              else if (kycStatus === 'pending') navigate('/guide/pending');
+              else if (kycStatus === 'approved') navigate('/guide/dashboard');
+              else if (kycStatus === 'rejected') navigate('/guide/kyc?status=rejected');
+            } else if (role === 'admin') navigate('/admin');
+            else navigate('/');
+          }
+        }, 500);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   const onSignupSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     try {
-      const { error } = await signUp(data.email, data.password, data.fullName);
+      console.log('Attempting signup for:', data.email, 'Role:', authRole);
+      const { error } = await signUp(data.email, data.password, data.fullName, authRole);
       if (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Signup failed',
-          description: getSafeErrorMessage(error),
+        console.error('Signup Error:', error);
+        toast({ 
+          variant: 'destructive', 
+          title: 'Account Creation Failed', 
+          description: error.message || "An unexpected error occurred. Please try again later."
         });
       } else {
-        navigate(`/auth/success?email=${encodeURIComponent(data.email)}`);
+        navigate(`/auth/success?email=${encodeURIComponent(data.email)}&role=${authRole}`);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e: any) {
+      console.error('Catch Error during signup:', e);
+      toast({ variant: 'destructive', title: 'Critical Error', description: e.message });
+    } finally { setIsLoading(false); }
   };
 
-  // Show loading state while confirming email
-  if (isConfirming) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
-        >
-          <div className="glass-effect rounded-2xl p-8 text-center shadow-elevated">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', delay: 0.2 }}
-              className="w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <Loader2 className="w-10 h-10 text-accent animate-spin" />
-            </motion.div>
-            <h2 className="heading-section text-2xl mb-4">Confirming Email</h2>
-            <p className="text-muted-foreground">
-              Please wait while we verify your email address...
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Show success state after confirmation
-  if (confirmationStatus === 'success') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
-        >
-          <div className="glass-effect rounded-2xl p-8 text-center shadow-elevated">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', delay: 0.2 }}
-              className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
-            </motion.div>
-            <h2 className="heading-section text-2xl mb-4">Email Confirmed!</h2>
-            <p className="text-muted-foreground mb-6">
-              Your account has been successfully verified. Redirecting you to home...
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Show error state after failed confirmation
-  if (confirmationStatus === 'error') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
-        >
-          <div className="glass-effect rounded-2xl p-8 text-center shadow-elevated">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', delay: 0.2 }}
-              className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <CheckCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
-            </motion.div>
-            <h2 className="heading-section text-2xl mb-4">Confirmation Failed</h2>
-            <p className="text-muted-foreground mb-6">
-              There was a problem confirming your email. The link may be expired or invalid.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setConfirmationStatus(null);
-              }}
-              className="w-full"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Login
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  const watchPassword = signupForm.watch('password', '');
+  const hasMinLength = watchPassword.length >= 8;
+  const hasUppercase = /[A-Z]/.test(watchPassword);
+  const hasNumber = /[0-9]/.test(watchPassword);
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Premium Image Background */}
-      <motion.div
-        initial={{ opacity: 0, x: -50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
-      >
-        {/* Background Image with slight scale animation for premium feel */}
-        <motion.div 
-          className="absolute inset-0"
-          initial={{ scale: 1.05 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 10, ease: "easeOut" }}
-        >
-          <img 
-            src="/loginimg.png" 
-            alt="Nepal Mountains at Sunrise" 
-            className="w-full h-full object-cover"
-          />
-        </motion.div>
-
-        {/* Premium Gradient Overlays */}
-        {/* Dark vignette effect to frame the image securely */}
-        <div className="absolute inset-0 bg-black/20" />
-        {/* Deep gradient at the top for the logo and bottom for the text */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/5 to-black" />
-        
-        {/* Subtle color grading accent */}
-        <div className="absolute inset-0 bg-primary/10 mix-blend-overlay" />
-
-        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 text-white h-full w-full">
-          {/* Top Section: Logo */}
-          <Link to="/" className="flex items-center gap-3 w-fit group">
-            <img src={gonepallogo} alt="GoNepal" className="h-10 w-auto opacity-90 group-hover:opacity-100 transition-opacity" />
-            <span className="text-2xl font-bold tracking-tight drop-shadow-lg">GoNepal</span>
-          </Link>
-
-          {/* Bottom Section: Text */}
-          <div className="mt-auto max-w-lg mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-bold uppercase tracking-[0.2em] mb-6 shadow-xl">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FFB800] animate-pulse" />
-                Start Your Journey
-              </div>
-              <h1 className="text-5xl xl:text-6xl font-black mb-6 leading-[1.1] tracking-tight text-white drop-shadow-2xl" style={{ fontFamily: '"Playfair Display", serif' }}>
-                Discover the Magic of Nepal
-              </h1>
-              <p className="text-lg text-white/80 leading-relaxed font-medium drop-shadow-md">
-                From the majestic Himalayas to ancient temples, explore breathtaking destinations and create unforgettable memories.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-background via-secondary/20 to-background">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-full max-w-md"
-        >
-          <Link to="/" className="lg:hidden flex items-center gap-2 text-primary mb-8">
-            <ArrowLeft className="w-5 h-5" />
-            Back to Home
-          </Link>
-
-          <div className="text-center mb-8">
-            <h2 className="heading-section text-3xl mb-2">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </h2>
-            <p className="text-muted-foreground">
-              {isLogin
-                ? 'Sign in to continue your adventure'
-                : 'Join us and start exploring Nepal'}
+    <div className="min-h-screen flex bg-[#f5f5f7] antialiased">
+      {/* Visual Section - The Sweet Spot */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-black border-r border-[#d2d2d7]/30">
+        <motion.img 
+          initial={{ scale: 1.1, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          src="/loginimg.png" 
+          alt="Nepal" 
+          className="w-full h-full object-cover opacity-80" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+        <div className="absolute inset-0 p-16 flex flex-col justify-center items-start">
+          <motion.div initial={{ x: -25, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }}>
+            <h1 className="text-6xl xl:text-8xl font-black text-white tracking-tighter leading-none mb-6">GoNepal.</h1>
+            <div className="h-[2px] w-20 bg-white mb-6" />
+            <p className="text-2xl xl:text-3xl text-white font-medium max-w-sm leading-snug tracking-tight opacity-90">
+              The mountains don't wait.<br/>Neither should your guide.
             </p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Form Section - Clean & Responsive */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 py-12 md:px-12 bg-[#f5f5f7]">
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-sm mx-auto">
+          
+          <header className="mb-8 text-center sm:text-left">
+            <h2 className="text-3xl font-semibold text-[#1d1d1f] tracking-tight">{isLogin ? 'Sign In' : 'Create Account'}</h2>
+            <p className="text-[#86868b] mt-2 text-sm leading-relaxed">
+              Use your GoNepal ID to manage journeys as a {authRole}.
+            </p>
+          </header>
+
+          <div className="bg-[#e8e8ed] p-1 rounded-xl flex mb-10 w-full shadow-inner shadow-slate-200">
+            <button onClick={() => setAuthRole('traveller')} className={`flex-1 py-1.5 rounded-[9px] text-[13px] font-semibold transition-all ${authRole === 'traveller' ? 'bg-white shadow-sm text-[#1d1d1f]' : 'text-[#86868b] hover:text-[#1d1d1f]'}`}>Traveller</button>
+            <button onClick={() => setAuthRole('guide')} className={`flex-1 py-1.5 rounded-[9px] text-[13px] font-semibold transition-all ${authRole === 'guide' ? 'bg-white shadow-sm text-[#1d1d1f]' : 'text-[#86868b] hover:text-[#1d1d1f]'}`}>Guide</button>
           </div>
 
-
-
-          {/* Toggle buttons */}
-          <div className="flex bg-muted/50 p-1.5 rounded-2xl mb-8 border border-border/50 shadow-inner">
-            <button
-              type="button"
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 ${isLogin
-                ? 'bg-white shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] text-foreground scale-[1.02]'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
-                }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 ${!isLogin
-                ? 'bg-white shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] text-foreground scale-[1.02]'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
-                }`}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          {isLogin ? (
-            <Form key="login" {...loginForm}>
-              <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-5">
-                <FormField
-                  control={loginForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input
-                            placeholder="you@example.com"
-                            type="email"
-                            autoComplete="email"
-                            className="pl-10"
-                            {...field}
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
+          <AnimatePresence mode="wait">
+            <motion.div key={isLogin ? 'login' : 'signup'} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.4 }}>
+              <Form {...(isLogin ? loginForm : signupForm)}>
+                <form onSubmit={(isLogin ? loginForm : signupForm).handleSubmit(isLogin ? onLoginSubmit : onSignupSubmit)} className="space-y-4">
+                  {!isLogin && (
+                    <FormField control={signupForm.control} name="fullName" render={({ field }) => (
+                      <FormItem>
+                        <FormControl><Input placeholder="Full Name" className="bg-white border-[#d2d2d7] rounded-xl py-6 px-4 text-[17px] focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] transition-colors shadow-none" {...field} /></FormControl>
+                        <FormMessage className="text-[12px] text-[#ff3b30]" />
+                      </FormItem>
+                    )} />
                   )}
-                />
-
-                <FormField
-                  control={loginForm.control}
-                  name="password"
-                  render={({ field }) => (
+                  
+                  <FormField control={(isLogin ? loginForm : signupForm).control} name="email" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input
-                            placeholder="••••••••"
-                            type={showPassword ? 'text' : 'password'}
-                            autoComplete="current-password"
-                            className="pl-10 pr-10"
-                            {...field}
-                          />
-                        </FormControl>
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
-                      <FormMessage />
+                      <FormControl><Input placeholder="Email" className="bg-white border-[#d2d2d7] rounded-xl py-6 px-4 text-[17px] focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] transition-colors shadow-none" {...field} /></FormControl>
+                      <FormMessage className="text-[12px] text-[#ff3b30]" />
                     </FormItem>
-                  )}
-                />
+                  )} />
 
-                <Button 
-                  type="submit" 
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-[#e35a26] to-[#E41B17] hover:from-[#d64e1c] hover:to-[#c0151a] text-white shadow-lg shadow-red-500/25 rounded-xl py-6 font-bold text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-            </Form>
-          ) : (
-            <Form key="signup" {...signupForm}>
-              <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-5">
-                <FormField
-                  control={signupForm.control}
-                  name="fullName"
-                  render={({ field }) => (
+                  <FormField control={(isLogin ? loginForm : signupForm).control} name="password" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input
-                            placeholder="John Doe"
-                            autoComplete="name"
-                            className="pl-10"
-                            {...field}
-                          />
-                        </FormControl>
+                        <FormControl><Input type={showPassword ? "text" : "password"} placeholder="Password" className="bg-white border-[#d2d2d7] rounded-xl py-6 px-4 text-[17px] focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] transition-colors shadow-none" {...field} /></FormControl>
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#86868b]">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
                       </div>
-                      <FormMessage />
+                      <FormMessage className="text-[12px] text-[#ff3b30]" />
+                      {!isLogin && (
+                        <div className="bg-white rounded-xl p-3.5 mt-2 border border-[#d2d2d7]/40 space-y-1.5 shadow-sm">
+                          <p className="text-[10px] font-bold text-[#86868b] uppercase tracking-widest mb-1.5 opacity-60">Validation Requirements</p>
+                          <div className="flex flex-col gap-2">
+                             <Requirement label="Min 8 characters" met={hasMinLength} />
+                             <Requirement label="One upper-case letter" met={hasUppercase} />
+                             <Requirement label="One number" met={hasNumber} />
+                          </div>
+                        </div>
+                      )}
                     </FormItem>
+                  )} />
+
+                  {!isLogin && (
+                    <FormField control={signupForm.control} name="confirmPassword" render={({ field }) => (
+                      <FormItem>
+                        <FormControl><Input type="password" placeholder="Confirm Password" className="bg-white border-[#d2d2d7] rounded-xl py-6 px-4 text-[17px] focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] transition-colors shadow-none" {...field} /></FormControl>
+                        <FormMessage className="text-[12px] text-[#ff3b30]" />
+                      </FormItem>
+                    )} />
                   )}
-                />
 
-                <FormField
-                  control={signupForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input
-                            placeholder="you@example.com"
-                            type="email"
-                            autoComplete="email"
-                            className="pl-10"
-                            {...field}
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="pt-6">
+                    <Button type="submit" disabled={isLoading} className="w-full h-[52px] rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-[17px] font-semibold transition-all flex items-center justify-center gap-2 group shadow-lg shadow-[#0071e3]/20">
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                        <>{isLogin ? 'Sign In' : 'Create Account'}<ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" /></>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </motion.div>
+          </AnimatePresence>
 
-                <FormField
-                  control={signupForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input
-                            placeholder="••••••••"
-                            type={showPassword ? 'text' : 'password'}
-                            autoComplete="new-password"
-                            className="pl-10 pr-10"
-                            {...field}
-                          />
-                        </FormControl>
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={signupForm.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input
-                            placeholder="••••••••"
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            autoComplete="new-password"
-                            className="pl-10 pr-10"
-                            {...field}
-                          />
-                        </FormControl>
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                        >
-                          {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <p className="text-xs text-muted-foreground">
-                  Password must be at least 8 characters with uppercase, lowercase, and a number.
-                </p>
-
-                <Button 
-                  type="submit" 
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-[#e35a26] to-[#E41B17] hover:from-[#d64e1c] hover:to-[#c0151a] text-white shadow-lg shadow-red-500/25 rounded-xl py-6 font-bold text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {isLoading ? 'Creating account...' : 'Create Account'}
-                </Button>
-              </form>
-            </Form>
-          )}
-
-          <p className="text-center text-sm text-muted-foreground mt-8">
-            By continuing, you agree to our{' '}
-            <Link to="/terms" className="text-primary hover:underline">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link to="/privacy" className="text-primary hover:underline">
-              Privacy Policy
-            </Link>
+          <footer className="mt-10 text-center sm:text-left text-sm">
+            <p className="text-[#86868b]">
+              {isLogin ? "No account?" : "Have one?"}
+              <button onClick={() => setIsLogin(!isLogin)} className="ml-1 text-[#0066cc] hover:underline font-medium">{isLogin ? 'Create yours.' : 'Sign in.'}</button>
+            </p>
+          </footer>
+          
+          <p className="mt-16 text-[11px] text-[#86868b] text-center max-w-[300px] mx-auto leading-relaxed border-t border-slate-200 pt-6">
+            Continue to agree to GoNepal's <Link to="/terms" className="text-[#0066cc]">Terms</Link> and <Link to="/privacy" className="text-[#0066cc]">Privacy Policy</Link>.
           </p>
         </motion.div>
       </div>
     </div>
   );
 };
+
+// Internal components
+const Requirement = ({ label, met }: { label: string, met: boolean }) => (
+  <div className="flex items-center gap-2.5">
+    <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${met ? 'bg-[#34c759]' : 'bg-slate-100 border border-slate-200'}`}>
+      {met && <Check className="w-2.5 h-2.5 text-white" />}
+    </div>
+    <span className={`text-[12px] transition-all ${met ? 'text-[#34c759] font-medium' : 'text-[#86868b]'}`}>{label}</span>
+  </div>
+);
 
 export default Auth;

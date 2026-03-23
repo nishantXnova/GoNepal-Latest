@@ -5,7 +5,6 @@ import { CheckCircle, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getSafeErrorMessage } from '@/utils/errorUtils';
 
 const SignupSuccess = () => {
   const navigate = useNavigate();
@@ -14,15 +13,14 @@ const SignupSuccess = () => {
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmationStatus, setConfirmationStatus] = useState<'pending' | 'success' | 'error'>('pending');
 
-  // Get email from search params if passed
   const email = searchParams.get('email');
+  const role = searchParams.get('role');
+  const isGuideSignup = role === 'guide';
 
   useEffect(() => {
-    // Check if this is a confirmation URL (from email link click)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const accessToken = hashParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token');
-
     const token = searchParams.get('token');
     const type = searchParams.get('type');
     const emailParam = searchParams.get('email');
@@ -37,33 +35,17 @@ const SignupSuccess = () => {
   const handleConfirmation = async (accessToken: string, refreshToken: string) => {
     setIsConfirming(true);
     try {
-      const { error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-
+      const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       if (error) {
         setConfirmationStatus('error');
-        toast({
-          variant: 'destructive',
-          title: 'Confirmation failed',
-          description: error.message,
-        });
+        toast({ variant: 'destructive', title: 'Confirmation failed', description: error.message });
       } else {
         setConfirmationStatus('success');
-        toast({
-          title: 'Email confirmed!',
-          description: 'Your account has been successfully verified.',
-        });
-        setTimeout(() => navigate('/'), 2000);
+        toast({ title: 'Email confirmed!', description: 'Your account has been successfully verified.' });
+        setTimeout(() => navigate(isGuideSignup ? '/guide/kyc' : '/'), 2000);
       }
     } catch (err) {
       setConfirmationStatus('error');
-      toast({
-        variant: 'destructive',
-        title: 'Confirmation failed',
-        description: 'An unexpected error occurred.',
-      });
     } finally {
       setIsConfirming(false);
     }
@@ -72,183 +54,56 @@ const SignupSuccess = () => {
   const handleOldConfirmation = async (token: string, type: string, emailParam?: string | null) => {
     setIsConfirming(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        token,
-        type: type as 'signup' | 'email_change' | 'recovery' | 'magiclink',
-        email: emailParam || undefined,
-      });
-
+      const { error } = await supabase.auth.verifyOtp({ token, type: type as any, email: emailParam || undefined });
       if (error) {
         setConfirmationStatus('error');
-        toast({
-          variant: 'destructive',
-          title: 'Confirmation failed',
-          description: error.message,
-        });
+        toast({ variant: 'destructive', title: 'Confirmation failed', description: error.message });
       } else {
         setConfirmationStatus('success');
-        toast({
-          title: 'Email confirmed!',
-          description: 'Your account has been successfully verified.',
-        });
-        setTimeout(() => navigate('/'), 2000);
+        toast({ title: 'Email confirmed!', description: 'Your account has been successfully verified.' });
+        setTimeout(() => navigate(isGuideSignup ? '/guide/kyc' : '/'), 2000);
       }
     } catch (err) {
       setConfirmationStatus('error');
-      toast({
-        variant: 'destructive',
-        title: 'Confirmation failed',
-        description: 'An unexpected error occurred.',
-      });
     } finally {
       setIsConfirming(false);
     }
   };
 
-  const handleContinue = () => {
-    navigate('/');
-  };
+  const handleContinue = () => navigate(isGuideSignup ? '/guide/kyc' : '/');
 
-  // Show loading state while confirming
   if (isConfirming) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
-        >
-          <div className="bg-card rounded-2xl p-8 text-center shadow-lg border">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', delay: 0.2 }}
-              className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <Loader2 className="w-10 h-10 text-primary animate-spin" />
-            </motion.div>
-            <h2 className="text-2xl font-bold mb-4">Confirming Email</h2>
-            <p className="text-muted-foreground">
-              Please wait while we verify your email address...
-            </p>
-          </div>
-        </motion.div>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+        <div className="text-center"><Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-4" /><h2 className="text-2xl font-bold">Verifying email...</h2></div>
       </div>
     );
   }
 
-  // Show success state after confirmation
   if (confirmationStatus === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
-        >
-          <div className="bg-card rounded-2xl p-8 text-center shadow-lg border">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', delay: 0.2 }}
-              className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
-            </motion.div>
-            <h2 className="text-2xl font-bold mb-4">Email Confirmed!</h2>
-            <p className="text-muted-foreground mb-6">
-              Your account has been successfully verified. Redirecting you to home...
-            </p>
-          </div>
-        </motion.div>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+        <div className="text-center text-green-600"><CheckCircle className="w-16 h-16 mx-auto mb-4" /><h2 className="text-3xl font-black">Verified!</h2><p className="text-slate-500 mt-2">Taking you to {(isGuideSignup ? 'Guide KYC' : 'Home')}...</p></div>
       </div>
     );
   }
 
-  // Show error state after failed confirmation
-  if (confirmationStatus === 'error') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
-        >
-          <div className="bg-card rounded-2xl p-8 text-center shadow-lg border">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', delay: 0.2 }}
-              className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <CheckCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
-            </motion.div>
-            <h2 className="text-2xl font-bold mb-4">Confirmation Failed</h2>
-            <p className="text-muted-foreground mb-6">
-              There was a problem confirming your email. The link may be expired or invalid.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/auth')}
-              className="w-full"
-            >
-              Back to Login
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Default: Show "Check your email" message
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-card rounded-2xl p-8 text-center shadow-lg border">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', delay: 0.2 }}
-            className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"
-          >
-            <Mail className="w-10 h-10 text-primary" />
-          </motion.div>
-          <h2 className="text-2xl font-bold mb-4">Check Your Email</h2>
-          <p className="text-muted-foreground mb-2">
-            We've sent a confirmation link to your email address.
-          </p>
-          {email && (
-            <p className="text-sm font-medium text-foreground mb-4">
-              {email}
-            </p>
-          )}
-          <p className="text-sm text-muted-foreground mb-6">
-            Please click the link to verify your account and complete the signup process.
-          </p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Didn't receive the email? Check your spam folder or try signing up again.
-          </p>
-
-          <div className="space-y-3 mt-6">
-            <Button
-              onClick={handleContinue}
-              className="w-full"
-            >
-              <ArrowRight className="w-4 h-4 mr-2" />
-              Continue to Home
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/auth')}
-              className="w-full"
-            >
-              Back to Login
-            </Button>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100 text-center">
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isGuideSignup ? 'bg-amber-100 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+          <Mail className="w-10 h-10" />
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 mb-4">{isGuideSignup ? 'Almost a Guide!' : 'Check Your Email'}</h2>
+        <p className="text-slate-500 mb-6 font-medium">
+          {isGuideSignup 
+            ? "We've sent a verification link to your email. You must verify your account to start your guide KYC process." 
+            : "We've sent a verification link to your email address."}
+        </p>
+        {email && <p className="bg-slate-50 py-2 px-4 rounded-xl text-slate-900 border border-slate-100 font-bold mb-6">{email}</p>}
+        <div className="space-y-4">
+          <Button onClick={handleContinue} className="w-full py-6 rounded-2xl bg-primary text-white font-bold text-lg shadow-lg"><ArrowRight className="w-5 h-5 mr-2" /> Continue to {(isGuideSignup ? 'Guide KYC' : 'Home')}</Button>
+          <Button variant="ghost" onClick={() => navigate('/auth')} className="w-full text-slate-400">Back to Login</Button>
         </div>
       </motion.div>
     </div>

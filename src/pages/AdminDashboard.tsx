@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Loader2, MapPin, Star, Users, Image, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, MapPin, Star, Users, Image, Save, X, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -238,7 +239,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-card rounded-xl p-6 border border-border">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -274,7 +275,23 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </div>
+            <Link to="/admin/applications" className="group">
+              <div className="bg-card rounded-xl p-6 border border-border hover:border-primary transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-all">
+                    <Users className="w-6 h-6 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground font-black flex items-center gap-2">
+                       KYC Review <Plus className="w-4 h-4 text-primary" />
+                    </p>
+                    <p className="text-sm text-muted-foreground">Guide Applications</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
           </div>
+
 
           {/* Places Table */}
           <div className="bg-card rounded-xl border border-border overflow-hidden">
