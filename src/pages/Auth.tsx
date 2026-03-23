@@ -44,7 +44,24 @@ const Auth = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, profile } = useAuth();
+  
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (user && profile) {
+      const role = profile.role?.toLowerCase();
+      if (role === 'admin' || user.email === import.meta.env.VITE_ADMIN_EMAIL) {
+        navigate('/admin');
+      } else if (role === 'guide') {
+        const kycStatus = profile.guide_applications?.[0]?.status;
+        if (!kycStatus) navigate('/guide/kyc');
+        else if (kycStatus === 'pending') navigate('/guide/pending');
+        else navigate('/guide/dashboard');
+      } else {
+        navigate('/');
+      }
+    }
+  }, [user, profile, navigate]);
   
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

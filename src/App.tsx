@@ -39,6 +39,7 @@ const GuideDashboard = lazy(() => import("@/pages/guide/GuideDashboard"));
 const AdminApplications = lazy(() => import("@/pages/admin/Applications"));
 
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdminVaultGate from "@/components/AdminVaultGate";
 
 const queryClient = new QueryClient();
 
@@ -69,8 +70,20 @@ const AnimatedRoutes = () => {
           <Route path="/guide/dashboard" element={<ProtectedRoute><GuideDashboard /></ProtectedRoute>} />
           
           {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/applications" element={<ProtectedRoute><AdminApplications /></ProtectedRoute>} />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminVaultGate>
+                <AdminDashboard />
+              </AdminVaultGate>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/applications" element={
+            <ProtectedRoute>
+              <AdminVaultGate>
+                <AdminApplications />
+              </AdminVaultGate>
+            </ProtectedRoute>
+          } />
           
           <Route path="/news" element={<NewsPage />} />
           <Route path="/tourist-id" element={<DigitalTouristID />} />
