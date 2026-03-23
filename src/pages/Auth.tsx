@@ -49,14 +49,16 @@ const Auth = () => {
   // Auto-redirect if already logged in
   useEffect(() => {
     if (user) {
-      // Priority 1: Hardcoded Master Admin Check (Immediate)
-      if (user.email === 'paudelnishant15@gmail.com') {
-        toast({ title: "Admin Recognized", description: "Redirecting to Security Vault..." });
+      const isAdminEmail = user.email === 'paudelnishant15@gmail.com';
+      
+      // If we are already on the /admin path, don't redirect away
+      if (location.pathname.startsWith('/admin')) return;
+
+      if (isAdminEmail) {
         navigate('/admin');
         return;
       }
 
-      // Priority 2: Profile-based Role Check
       if (profile) {
         const role = profile.role?.toLowerCase();
         if (role === 'admin') {
@@ -71,7 +73,7 @@ const Auth = () => {
         }
       }
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, navigate, location.pathname]);
   
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

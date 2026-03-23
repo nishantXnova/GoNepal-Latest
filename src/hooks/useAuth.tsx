@@ -57,10 +57,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!isMounted) return;
 
           setSession(session);
-          setUser(session?.user ?? null);
+          const currentUser = session?.user ?? null;
+          setUser(currentUser);
 
-          if (session?.user) {
-            await fetchProfile(session.user.id);
+          if (currentUser) {
+            // Instant Admin Check
+            if (currentUser.email === 'paudelnishant15@gmail.com') {
+              setIsAdmin(true);
+            }
+            
+            await fetchProfile(currentUser.id);
             if (isMounted) setLoading(false);
           } else {
             setProfile(null);
@@ -76,6 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session) {
           setSession(session);
           setUser(session.user);
+          // Instant Admin Check
+          if (session.user.email === 'paudelnishant15@gmail.com') {
+            setIsAdmin(true);
+          }
           fetchProfile(session.user.id);
         } else {
           setLoading(false);

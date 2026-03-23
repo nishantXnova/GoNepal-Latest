@@ -71,14 +71,14 @@ const AnimatedRoutes = () => {
           
           {/* Admin Routes */}
           <Route path="/admin" element={
-            <ProtectedRoute>
+            <ProtectedRoute requireAdmin={true}>
               <AdminVaultGate>
                 <AdminDashboard />
               </AdminVaultGate>
             </ProtectedRoute>
           } />
           <Route path="/admin/applications" element={
-            <ProtectedRoute>
+            <ProtectedRoute requireAdmin={true}>
               <AdminVaultGate>
                 <AdminApplications />
               </AdminVaultGate>
