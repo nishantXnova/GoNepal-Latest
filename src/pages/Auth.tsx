@@ -371,55 +371,40 @@ const Auth = () => {
                   <Shield className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'DM Sans, sans-serif' }}>Admin Verification</h3>
-                <p className="text-slate-500 text-sm mb-6">Verify your identity to access the admin dashboard.</p>
+                <p className="text-slate-500 text-sm mb-6">Enter your authenticator code to access the admin dashboard.</p>
                 
-                {adminVerifyMode === 'pin' ? (
-                  <div className="space-y-4">
-                    <input 
-                      type="password" 
-                      maxLength={4}
-                      value={adminPin}
-                      onChange={(e) => setAdminPin(e.target.value)}
-                      placeholder="Enter PIN"
-                      className="w-[180px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
-                      autoFocus
-                    />
-                    <Button onClick={handleAdminPinVerify} className="w-full h-12 bg-[#0071e3] rounded-2xl text-white font-bold">
-                      Verify PIN
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <input 
-                      type="text" 
-                      maxLength={6}
-                      value={adminTotp}
-                      onChange={(e) => setAdminTotp(e.target.value)}
-                      placeholder="000000"
-                      className="w-[200px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.2em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
-                      autoFocus
-                    />
-                    <Button onClick={handleAdminTotpVerify} className="w-full h-12 bg-slate-900 rounded-2xl text-white font-bold">
-                      Verify Authenticator
-                    </Button>
-                  </div>
-                )}
-                
-                <div className="flex gap-3 mt-4">
-                  <button 
-                    onClick={() => setAdminVerifyMode(adminVerifyMode === 'pin' ? 'totp' : 'pin')}
-                    className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-500"
+                <div className="space-y-4">
+                  <input 
+                    type="text" 
+                    maxLength={6}
+                    value={adminTotp}
+                    onChange={(e) => setAdminTotp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Enter 6-digit code"
+                    className="w-[200px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.2em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
+                    autoFocus
+                  />
+                  <Button 
+                    onClick={() => {
+                      if (adminTotp.length === 6) {
+                        handleAdminTotpVerify();
+                      } else {
+                        toast({ variant: 'destructive', title: 'Invalid Code', description: 'Please enter a 6-digit code.' });
+                      }
+                    }} 
+                    className="w-full h-12 bg-slate-900 rounded-2xl text-white font-bold"
                   >
-                    <Smartphone className="w-4 h-4" />
-                    {adminVerifyMode === 'pin' ? 'Use Authenticator' : 'Use PIN'}
-                  </button>
+                    Verify & Continue
+                  </Button>
+                </div>
+                
+                <div className="mt-6 pt-6 border-t border-slate-100">
                   <button 
                     onClick={() => {
                       setShowAdminVerify(false);
                       setAdminPin('');
                       setAdminTotp('');
                     }}
-                    className="flex-1 p-3 bg-slate-50 rounded-xl text-xs font-bold text-red-500"
+                    className="w-full p-3 bg-slate-50 rounded-xl text-xs font-bold text-red-500"
                   >
                     Cancel
                   </button>
