@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isGuide, setIsGuide] = useState(false);
   const [profile, setProfile] = useState<any | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userEmail?: string) => {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -40,7 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Also check admin status via role or rpc
         const { data: adminData } = await supabase.rpc('is_admin', { _user_id: userId });
-        const isLocalAdmin = user?.email === 'paudelnishant15@gmail.com';
+        // Check email directly or from parameter (passed to avoid closure issues)
+        const isLocalAdmin = userEmail === 'paudelnishant15@gmail.com' || user?.email === 'paudelnishant15@gmail.com';
         setIsAdmin(!!adminData || profileData.role === 'admin' || isLocalAdmin);
       }
     } catch (err) {
@@ -66,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setIsAdmin(true);
             }
             
-            await fetchProfile(currentUser.id);
+            await fetchProfile(currentUser.id, currentUser.email ?? undefined);
             if (isMounted) setLoading(false);
           } else {
             setProfile(null);
@@ -86,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (session.user.email === 'paudelnishant15@gmail.com') {
             setIsAdmin(true);
           }
-          fetchProfile(session.user.id).finally(() => {
+          fetchProfile(session.user.id, session.user.email ?? undefined).finally(() => {
             if (isMounted) setLoading(false);
           });
         } else {
@@ -149,7 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id);
+      await fetchProfile(user.id, user.email ?? undefined);
     }
   };
 
