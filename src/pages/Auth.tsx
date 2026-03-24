@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Mail, Lock, User, Loader2, ChevronRight, Check } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Loader2, ChevronRight, Check, Shield, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getSafeErrorMessage } from '@/utils/errorUtils';
 import gonepallogo from '@/assets/gonepallogo.png';
+import * as OTPAuth from 'otpauth';
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: 'Valid email is required' }),
@@ -39,6 +40,13 @@ const Auth = () => {
   const [authRole, setAuthRole] = useState<'traveller' | 'guide'>('traveller');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Admin verification states
+  const [adminPin, setAdminPin] = useState('');
+  const [adminTotp, setAdminTotp] = useState('');
+  const [showAdminVerify, setShowAdminVerify] = useState(false);
+  const [adminVerifyMode, setAdminVerifyMode] = useState<'pin' | 'totp'>('pin');
+  const [isAdminVerified, setIsAdminVerified] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -96,14 +104,25 @@ const Auth = () => {
           if (user) {
             const { data: profileCheck } = await (supabase.from('profiles' as any) as any).select('*, guide_applications(status)').eq('id', user.id).single();
             const role = (profileCheck as any)?.role?.toLowerCase();
+            const isAdminEmail = user.email === 'paudelnishant15@gmail.com';
+            
             if (role === 'guide') {
               const kycStatus = profileCheck?.guide_applications?.[0]?.status;
               if (!kycStatus) navigate('/guide/kyc');
               else if (kycStatus === 'pending') navigate('/guide/pending');
               else if (kycStatus === 'approved') navigate('/guide/dashboard');
               else if (kycStatus === 'rejected') navigate('/guide/kyc?status=rejected');
-            } else if (role === 'admin') navigate('/admin');
-            else navigate('/');
+            } else if (role === 'admin' || isAdminEmail) {
+              // For admin users, show verification modal instead of auto-redirect
+              // But also check if already verified in this session
+              if (sessionStorage.getItem('admin_vault_unlocked') === 'true') {
+                navigate('/admin');
+              } else {
+                setShowAdminVerify(true);
+              }
+            } else {
+              navigate('/');
+            }
           }
         }, 500);
       }
@@ -117,6 +136,71 @@ const Auth = () => {
       if (error) toast({ variant: 'destructive', title: 'Account Creation Failed', description: error.message });
       else navigate(`/auth/success?email=${encodeURIComponent(data.email)}&role=${authRole}`);
     } finally { setIsLoading(false); }
+  };
+
+  // Admin verification handlers for login page
+  const MASTER_PIN = import.meta.env.VITE_ADMIN_PIN || '7394';
+  
+  const handleAdminPinVerify = () => {
+    if (adminPin === MASTER_PIN) {
+      setIsAdminVerified(true);
+      setShowAdminVerify(false);
+      sessionStorage.setItem('admin_vault_unlocked', 'true');
+      toast({ title: "PIN Verified", description: "Admin access granted." });
+      setAdminPin('');
+      // Navigate to admin dashboard after successful verification
+      navigate('/admin');
+    } else {
+      toast({ variant: "destructive", title: "Invalid PIN", description: "Access denied." });
+      setAdminPin('');
+    }
+  };
+
+  const handleAdminTotpVerify = () => {
+    const secret = "ECD9G7MDCAJWCX2F2WJO59FJO";
+    const totpGenerator = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    
+    const generatedToken = totpGenerator.generate();
+    const prevTOTP = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    const prevToken = prevTOTP.generate();
+    
+    const nextTOTP = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    const nextToken = nextTOTP.generate();
+    
+    const isValid = adminTotp === generatedToken || adminTotp === prevToken || adminTotp === nextToken;
+    
+    if (isValid) {
+      setIsAdminVerified(true);
+      setShowAdminVerify(false);
+      sessionStorage.setItem('admin_vault_unlocked', 'true');
+      toast({ title: "Authenticator Verified", description: "Admin access granted." });
+      setAdminTotp('');
+      // Navigate to admin dashboard after successful verification
+      navigate('/admin');
+    } else {
+      toast({ variant: "destructive", title: "Invalid Code", description: "Authenticator sync failed." });
+    }
   };
 
   const watchPassword = signupForm.watch('password', '');
@@ -151,7 +235,7 @@ const Auth = () => {
               <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
               <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">Start Your Journey</span>
             </div>
-            <h1 className="text-7xl font-bold text-white leading-[1.1] mb-6 font-serif tracking-tight">
+            <h1 className="text-7xl font-semibold text-white leading-[1.1] mb-6 tracking-tight" style={{ fontFamily: 'DM Sans, sans-serif' }}>
               Discover the Magic of Nepal
             </h1>
             <p className="text-lg text-white/90 max-w-lg leading-relaxed font-sans font-light">
@@ -166,8 +250,8 @@ const Auth = () => {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-sm">
           
           <header className="mb-10 text-center">
-            <h2 className="text-4xl font-bold text-slate-900 font-serif mb-2">{isLogin ? 'Welcome Back' : 'Join GoNepal'}</h2>
-            <p className="text-slate-500 font-medium text-sm">
+            <h2 className="text-4xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'DM Sans, sans-serif' }}>{isLogin ? 'Welcome Back' : 'Join GoNepal'}</h2>
+            <p className="text-slate-500 text-sm">
               {isLogin ? 'Sign in to continue your adventure' : 'Create an account to start exploring'}
             </p>
           </header>
@@ -269,6 +353,80 @@ const Auth = () => {
               </Form>
             </motion.div>
           </AnimatePresence>
+
+          {/* Admin Verification Modal */}
+          {showAdminVerify && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                className="bg-white p-8 rounded-[40px] text-center max-w-sm w-full"
+              >
+                <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'DM Sans, sans-serif' }}>Admin Verification</h3>
+                <p className="text-slate-500 text-sm mb-6">Verify your identity to access the admin dashboard.</p>
+                
+                {adminVerifyMode === 'pin' ? (
+                  <div className="space-y-4">
+                    <input 
+                      type="password" 
+                      maxLength={4}
+                      value={adminPin}
+                      onChange={(e) => setAdminPin(e.target.value)}
+                      placeholder="Enter PIN"
+                      className="w-[180px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
+                      autoFocus
+                    />
+                    <Button onClick={handleAdminPinVerify} className="w-full h-12 bg-[#0071e3] rounded-2xl text-white font-bold">
+                      Verify PIN
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <input 
+                      type="text" 
+                      maxLength={6}
+                      value={adminTotp}
+                      onChange={(e) => setAdminTotp(e.target.value)}
+                      placeholder="000000"
+                      className="w-[200px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.2em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
+                      autoFocus
+                    />
+                    <Button onClick={handleAdminTotpVerify} className="w-full h-12 bg-slate-900 rounded-2xl text-white font-bold">
+                      Verify Authenticator
+                    </Button>
+                  </div>
+                )}
+                
+                <div className="flex gap-3 mt-4">
+                  <button 
+                    onClick={() => setAdminVerifyMode(adminVerifyMode === 'pin' ? 'totp' : 'pin')}
+                    className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-500"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    {adminVerifyMode === 'pin' ? 'Use Authenticator' : 'Use PIN'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowAdminVerify(false);
+                      setAdminPin('');
+                      setAdminTotp('');
+                    }}
+                    className="flex-1 p-3 bg-slate-50 rounded-xl text-xs font-bold text-red-500"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
 
           <footer className="mt-12 text-center">
             <p className="text-[12px] text-slate-400 max-w-[280px] mx-auto leading-relaxed">

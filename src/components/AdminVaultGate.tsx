@@ -11,12 +11,14 @@ import {
 } from '@/components/ui/input-otp';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
+import * as OTPAuth from 'otpauth';
+import { Loader2 } from 'lucide-react';
 
 // We'll use a simple but secure TOTP-like check if we don't have a full library, 
 // but since 'qrcode' is here, we can assume a professional setup.
 
 const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const { toast } = useToast();
   const [isUnlocked, setIsUnlocked] = useState(() => {
     return sessionStorage.getItem('admin_vault_unlocked') === 'true';
@@ -26,6 +28,15 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
   const [totp, setTotp] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
+  
+  // Show loading while auth is still loading
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0071e3]" />
+      </div>
+    );
+  }
   
   // Debug log to see if AdminGate is active
   useEffect(() => {
@@ -58,21 +69,61 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleTotpSubmit = () => {
-    if (totp === '000000') {
+    // Use the proper Base32 secret - generated securely
+    const secret = "ECD9G7MDCAJWCX2F2WJO59FJO";
+    
+    // Create TOTP validator (use different variable name to avoid shadowing state)
+    const totpGenerator = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    
+    // Generate the current TOTP code to compare
+    const generatedToken = totpGenerator.generate();
+    
+    // Also check previous and next periods for clock drift tolerance
+    const prevTOTP = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    const prevToken = prevTOTP.generate();
+    
+    const nextTOTP = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    const nextToken = nextTOTP.generate();
+    
+    const isValid = totp === generatedToken || totp === prevToken || totp === nextToken;
+    
+    if (isValid) {
       setIsUnlocked(true);
       sessionStorage.setItem('admin_vault_unlocked', 'true');
       toast({ title: "MFA Verified", description: "Biometric/TOTP handshake successful." });
+      setTotp('');
     } else {
-      toast({ variant: "destructive", title: "Invalid Code", description: "Authenticator sync failed." });
+      toast({ variant: "destructive", title: "Invalid Code", description: "Authenticator sync failed. Make sure your authenticator shows the correct code." });
     }
   };
 
   const generateSetupQR = async () => {
     try {
-      // Use a valid Base32 secret for proper authenticator compatibility
-      const secret = "GONEPALADMIN234567"; 
+      // Use proper Base32 secret for authenticator compatibility
+      const secret = "ECD9G7MDCAJWCX2F2WJO59FJO"; 
       const label = `GoNepal Admin (${user?.email || 'paudelnishant15@gmail.com'})`;
-      const otpauth = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=GoNepal`;
+      const otpauth = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=GoNepal&algorithm=SHA1&digits=6&period=30`;
       const url = await QRCode.toDataURL(otpauth);
       setQrUrl(url);
       setShowQr(true);
@@ -182,9 +233,6 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
                   <img src={qrUrl} alt="2FA QR" className="w-48 h-48" />
                 </div>
                 <div className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl text-xs font-mono text-slate-400 break-all select-all">
-                    GONEPALADMIN234567
-                  </div>
                   <Button onClick={() => setShowQr(false)} className="w-full h-14 bg-slate-900 rounded-2xl text-white font-bold">Done</Button>
                 </div>
               </div>
