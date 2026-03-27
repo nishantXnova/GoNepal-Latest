@@ -17,9 +17,10 @@ import { Loader2 } from 'lucide-react';
 // We'll use a simple but secure TOTP-like check if we don't have a full library, 
 // but since 'qrcode' is here, we can assume a professional setup.
 
-const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
+const AdminVaultGate = ({ children, showQrModal = false }: { children: React.ReactNode; showQrModal?: boolean }) => {
   const { user, signOut, loading } = useAuth();
   const { toast } = useToast();
+  const [location] = useState(() => window.location);
   const [isUnlocked, setIsUnlocked] = useState(() => {
     return sessionStorage.getItem('admin_vault_unlocked') === 'true';
   });
@@ -28,6 +29,31 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
   const [totp, setTotp] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
+  
+  // Generate QR code function
+  const generateSetupQR = async () => {
+    try {
+      // Use proper Base32 secret for authenticator compatibility
+      const secret = "ECD9G7MDCAJWCX2F2WJO59FJO"; 
+      const label = `GoNepal Admin (${user?.email || 'paudelnishant15@gmail.com'})`;
+      const otpauth = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=GoNepal&algorithm=SHA1&digits=6&period=30`;
+      const url = await QRCode.toDataURL(otpauth);
+      setQrUrl(url);
+      setShowQr(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  
+  // Auto-show QR modal when prop is set or URL has qr param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (showQrModal || params.get('qr') === 'setup') {
+      generateSetupQR();
+      // Clean URL
+      window.history.replaceState({}, '', '/admin');
+    }
+  }, [showQrModal]);
   
   // Show loading while auth is still loading
   if (loading) {
@@ -72,8 +98,13 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
     // Use the proper Base32 secret - generated securely
     const secret = "ECD9G7MDCAJWCX2F2WJO59FJO";
     
-    // Create TOTP validator (use different variable name to avoid shadowing state)
-    const totpGenerator = new OTPAuth.TOTP({
+    // Generate multiple tokens to handle time drift and period boundaries
+    const now = Date.now();
+    const currentPeriod = Math.floor(now / 30000);
+    const tokens: string[] = [];
+    
+    // Previous period (30 seconds ago)
+    const prevToken = new OTPAuth.TOTP({
       issuer: 'GoNepal',
       label: 'GoNepal Admin',
       algorithm: 'SHA1',
@@ -81,12 +112,12 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
       period: 30,
       secret: OTPAuth.Secret.fromBase32(secret),
     });
+    // @ts-ignore - internal property for timestamp
+    prevToken._period = currentPeriod - 1;
+    tokens.push(prevToken.generate());
     
-    // Generate the current TOTP code to compare
-    const generatedToken = totpGenerator.generate();
-    
-    // Also check previous and next periods for clock drift tolerance
-    const prevTOTP = new OTPAuth.TOTP({
+    // Current period
+    const curToken = new OTPAuth.TOTP({
       issuer: 'GoNepal',
       label: 'GoNepal Admin',
       algorithm: 'SHA1',
@@ -94,9 +125,12 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
       period: 30,
       secret: OTPAuth.Secret.fromBase32(secret),
     });
-    const prevToken = prevTOTP.generate();
+    // @ts-ignore - internal property for timestamp
+    curToken._period = currentPeriod;
+    tokens.push(curToken.generate());
     
-    const nextTOTP = new OTPAuth.TOTP({
+    // Next period (30 seconds from now)
+    const nextToken = new OTPAuth.TOTP({
       issuer: 'GoNepal',
       label: 'GoNepal Admin',
       algorithm: 'SHA1',
@@ -104,9 +138,11 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
       period: 30,
       secret: OTPAuth.Secret.fromBase32(secret),
     });
-    const nextToken = nextTOTP.generate();
+    // @ts-ignore - internal property for timestamp
+    nextToken._period = currentPeriod + 1;
+    tokens.push(nextToken.generate());
     
-    const isValid = totp === generatedToken || totp === prevToken || totp === nextToken;
+    const isValid = tokens.includes(totp);
     
     if (isValid) {
       setIsUnlocked(true);
@@ -115,20 +151,6 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
       setTotp('');
     } else {
       toast({ variant: "destructive", title: "Invalid Code", description: "Authenticator sync failed. Make sure your authenticator shows the correct code." });
-    }
-  };
-
-  const generateSetupQR = async () => {
-    try {
-      // Use proper Base32 secret for authenticator compatibility
-      const secret = "ECD9G7MDCAJWCX2F2WJO59FJO"; 
-      const label = `GoNepal Admin (${user?.email || 'paudelnishant15@gmail.com'})`;
-      const otpauth = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=GoNepal&algorithm=SHA1&digits=6&period=30`;
-      const url = await QRCode.toDataURL(otpauth);
-      setQrUrl(url);
-      setShowQr(true);
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -195,8 +217,17 @@ const AdminVaultGate = ({ children }: { children: React.ReactNode }) => {
               onClick={() => setMode(mode === 'pin' ? 'totp' : 'pin')}
               className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100/50 hover:bg-white hover:shadow-sm transition-all"
             >
-              <Smartphone className="w-5 h-5 text-slate-400" />
-              <span className="text-[10px] font-bold uppercase text-slate-500">{mode === 'pin' ? 'Use Authenticator' : 'Use PIN'}</span>
+              {mode === 'pin' ? (
+                <>
+                  <Smartphone className="w-5 h-5 text-slate-400" />
+                  <span className="text-[10px] font-bold uppercase text-slate-500">Use Authenticator</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-5 h-5 text-slate-400" />
+                  <span className="text-[10px] font-bold uppercase text-slate-500">Use PIN</span>
+                </>
+              )}
             </button>
             <button 
               onClick={() => {

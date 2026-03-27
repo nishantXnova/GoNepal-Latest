@@ -112,19 +112,22 @@ const Auth = () => {
               else if (kycStatus === 'pending') navigate('/guide/pending');
               else if (kycStatus === 'approved') navigate('/guide/dashboard');
               else if (kycStatus === 'rejected') navigate('/guide/kyc?status=rejected');
-            } else if (role === 'admin' || isAdminEmail) {
-              // For admin users, show verification modal instead of auto-redirect
-              // But also check if already verified in this session
-              if (sessionStorage.getItem('admin_vault_unlocked') === 'true') {
-                navigate('/admin');
-              } else {
-                setShowAdminVerify(true);
-              }
-            } else {
+        // Check if user is already verified in this session
+        // Use a small delay to ensure sessionStorage is properly set
+        const isVaultUnlocked = sessionStorage.getItem('admin_vault_unlocked') === 'true';
+        
+        if (isVaultUnlocked) {
+          // Add a small delay to ensure auth state is fully propagated
+          setTimeout(() => navigate('/admin'), 100);
+        } else {
+          // Show verification modal for admin users
+          setShowAdminVerify(true);
+        }
+              // Regular user - go to home
               navigate('/');
             }
           }
-        }, 500);
+        }, 800);
       }
     } finally { setIsLoading(false); }
   };
@@ -140,6 +143,74 @@ const Auth = () => {
 
   // Admin verification handlers for login page
   const MASTER_PIN = import.meta.env.VITE_ADMIN_PIN || '7394';
+  
+  // Shared secret - must match what's used in AdminVaultGate
+  const TOTP_SECRET = 'ECD9G7MDCAJWCX2F2WJO59FJO';
+  
+  // Generate TOTP code for comparison - using current system time
+  // This generates multiple tokens to handle time drift and period boundaries
+  const generateValidTotpCodes = () => {
+    const secret = TOTP_SECRET;
+    
+    // Current period
+    const totp = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    
+    // Generate multiple tokens - the library caches internally so calling generate() 
+    // multiple times gives us current, previous, and potentially next period tokens
+    const tokens: string[] = [];
+    
+    // Force token generation at different timestamps to handle period boundaries
+    const now = Date.now();
+    const currentPeriod = Math.floor(now / 30000);
+    
+    // Previous period (30 seconds ago)
+    const prevToken = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    // @ts-ignore - internal property for timestamp
+    prevToken._period = currentPeriod - 1;
+    tokens.push(prevToken.generate());
+    
+    // Current period
+    const curToken = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    // @ts-ignore - internal property for timestamp
+    curToken._period = currentPeriod;
+    tokens.push(curToken.generate());
+    
+    // Next period (30 seconds from now)
+    const nextToken = new OTPAuth.TOTP({
+      issuer: 'GoNepal',
+      label: 'GoNepal Admin',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    // @ts-ignore - internal property for timestamp
+    nextToken._period = currentPeriod + 1;
+    tokens.push(nextToken.generate());
+    
+    return tokens;
+  };
   
   const handleAdminPinVerify = () => {
     if (adminPin === MASTER_PIN) {
@@ -157,38 +228,13 @@ const Auth = () => {
   };
 
   const handleAdminTotpVerify = () => {
-    const secret = "ECD9G7MDCAJWCX2F2WJO59FJO";
-    const totpGenerator = new OTPAuth.TOTP({
-      issuer: 'GoNepal',
-      label: 'GoNepal Admin',
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret: OTPAuth.Secret.fromBase32(secret),
-    });
+    if (adminTotp.length !== 6) {
+      toast({ variant: 'destructive', title: 'Invalid Code', description: 'Please enter a 6-digit code.' });
+      return;
+    }
     
-    const generatedToken = totpGenerator.generate();
-    const prevTOTP = new OTPAuth.TOTP({
-      issuer: 'GoNepal',
-      label: 'GoNepal Admin',
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret: OTPAuth.Secret.fromBase32(secret),
-    });
-    const prevToken = prevTOTP.generate();
-    
-    const nextTOTP = new OTPAuth.TOTP({
-      issuer: 'GoNepal',
-      label: 'GoNepal Admin',
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret: OTPAuth.Secret.fromBase32(secret),
-    });
-    const nextToken = nextTOTP.generate();
-    
-    const isValid = adminTotp === generatedToken || adminTotp === prevToken || adminTotp === nextToken;
+    const validCodes = generateValidTotpCodes();
+    const isValid = validCodes.includes(adminTotp);
     
     if (isValid) {
       setIsAdminVerified(true);
@@ -199,7 +245,7 @@ const Auth = () => {
       // Navigate to admin dashboard after successful verification
       navigate('/admin');
     } else {
-      toast({ variant: "destructive", title: "Invalid Code", description: "Authenticator sync failed." });
+      toast({ variant: 'destructive', title: 'Invalid Code', description: 'Authenticator code does not match. Make sure your device time is correct and you are using the correct authenticator.' });
     }
   };
 
@@ -371,30 +417,59 @@ const Auth = () => {
                   <Shield className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'DM Sans, sans-serif' }}>Admin Verification</h3>
-                <p className="text-slate-500 text-sm mb-6">Enter your authenticator code to access the admin dashboard.</p>
+                <p className="text-slate-500 text-sm mb-6">
+                  {adminVerifyMode === 'pin' 
+                    ? "Enter your 4-digit PIN to access the admin dashboard." 
+                    : "Enter your authenticator code to access the admin dashboard."}
+                </p>
                 
                 <div className="space-y-4">
-                  <input 
-                    type="text" 
-                    maxLength={6}
-                    value={adminTotp}
-                    onChange={(e) => setAdminTotp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Enter 6-digit code"
-                    className="w-[200px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.2em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
-                    autoFocus
-                  />
+                  {adminVerifyMode === 'pin' ? (
+                    <input 
+                      type="password" 
+                      maxLength={4}
+                      value={adminPin}
+                      onChange={(e) => setAdminPin(e.target.value)}
+                      placeholder="Enter 4-digit PIN"
+                      className="w-[180px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.3em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
+                      autoFocus
+                    />
+                  ) : (
+                    <input 
+                      type="text" 
+                      maxLength={6}
+                      value={adminTotp}
+                      onChange={(e) => setAdminTotp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter 6-digit code"
+                      className="w-[200px] h-14 bg-slate-50 border-none rounded-2xl text-center text-3xl tracking-[0.2em] focus:ring-2 focus:ring-[#0071e3] mx-auto"
+                      autoFocus
+                    />
+                  )}
                   <Button 
                     onClick={() => {
-                      if (adminTotp.length === 6) {
-                        handleAdminTotpVerify();
+                      if (adminVerifyMode === 'pin') {
+                        handleAdminPinVerify();
                       } else {
-                        toast({ variant: 'destructive', title: 'Invalid Code', description: 'Please enter a 6-digit code.' });
+                        if (adminTotp.length === 6) {
+                          handleAdminTotpVerify();
+                        } else {
+                          toast({ variant: 'destructive', title: 'Invalid Code', description: 'Please enter a 6-digit code.' });
+                        }
                       }
                     }} 
                     className="w-full h-12 bg-slate-900 rounded-2xl text-white font-bold"
                   >
                     Verify & Continue
                   </Button>
+                </div>
+                
+                <div className="mt-4 flex justify-center gap-2">
+                  <button 
+                    onClick={() => setAdminVerifyMode(adminVerifyMode === 'pin' ? 'totp' : 'pin')}
+                    className="text-xs font-bold text-[#0071e3] hover:underline"
+                  >
+                    {adminVerifyMode === 'pin' ? 'Use Authenticator' : 'Use PIN'}
+                  </button>
                 </div>
                 
                 <div className="mt-6 pt-6 border-t border-slate-100">

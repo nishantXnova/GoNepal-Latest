@@ -299,10 +299,7 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-xl font-bold text-foreground">MFA Active</p>
                   <button 
-                    onClick={() => {
-                      sessionStorage.removeItem('admin_vault_unlocked');
-                      window.location.reload();
-                    }}
+                    onClick={() => navigate('/admin?qr=setup')}
                     className="text-xs text-blue-500 font-bold hover:underline"
                   >
                     Setup/Reset Authenticator

@@ -36,6 +36,7 @@
 - [🚀 Deployment](#-deployment)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-page-license)
+- [🎯 Future Goals](#-future-goals)
 - [🏆 Team](#-team)
 - [📞 Contact](#-contact)
 
@@ -66,6 +67,7 @@ To make Nepal accessible to every traveler by removing language barriers and pro
 | **First Digital Tourist ID** | Simulated FNMIS integration sets foundation for official digital identity |
 | **First Weather-Smart Itinerary** | AI that plans your day based on actual weather conditions—not just generic suggestions |
 | **First Geofenced Safety System** | Proximity alerts and SOS integration for trekking safety |
+| **First BLE Proximity Alerts** | Bluetooth Low Energy device pairing for instant nearby notifications |
 
 ### 🛠️ Technical Differentiators
 
@@ -179,6 +181,7 @@ GoNepal offers value to Nepal's tourism ecosystem:
 | **Home Base System** | "Set Home" functionality with proximity alerts when wandering >3km |
 | **Deep Linking** | Direct integration with Google Maps/Apple Maps for navigation |
 | **SOS Emergency** | One-tap emergency alert system with location sharing |
+| **BLE Proximity** | Bluetooth Low Energy device pairing for nearby alerts |
 
 ### 🪪 Digital Identity
 
@@ -212,7 +215,7 @@ GoNepal offers value to Nepal's tourism ecosystem:
 | **Glassmorphic UI** | Beautiful glassmorphism design system |
 | **Smooth Transitions** | Framer Motion page animations |
 | **Offline Mode** | Service worker for offline functionality |
-| **PWA Ready** | Progressive Web App capabilities |
+| **PWA Ready** | Progressive Web App with BLE & offline support |
 
 ---
 
@@ -260,7 +263,8 @@ GoNepal offers value to Nepal's tourism ecosystem:
 | **ESLint** | Code Linting |
 | **Vitest** | Testing |
 | **Testing Library** | Component Testing |
-| **PostCSS** | CSS Processing |
+| **PostCSS** | CSS Processing |  
+| **PWABuilder** | PWA Validation & Packaging |
 
 ---
 
@@ -499,6 +503,36 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 - [Nishant Xnova](https://github.com/nishantXnova) - Lead Developer
 - And contributing team members
+
+---
+
+## 🎯 Future Goals
+
+We're continuously working to improve GoNepal. Here are some features we're planning to implement:
+
+### 🚀 Implemented Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Field Interview Pages** | User research and feedback showcase pages | ✅ Implemented |
+
+### 💰 Monetization & Revenue Features
+
+| Feature | Description | Status | Revenue Model |
+|---------|-------------|--------|---------------|
+| **Guide Marketplace** | Connect tourists with verified local trekking/tour guides | 🔄 In Development | Commission on bookings |
+| **Flight Booking** | Search & compare flights from Nepal-based airlines | ✅ Implemented | Affiliate commissions |
+| **Featured Listings** | Hotels, restaurants, shops paying for priority visibility | 🔄 Planned | Subscription/Listings fees |
+| **Guide Premium Features** | Analytics, profile boosts, verified badges for guides | 🔄 Planned | Premium subscriptions |
+| **Local Business Ads** | Targeted advertisements for local businesses | 🔄 Planned | Pay-per-click ads |
+| **Package Tours** | Pre-packaged tours from verified operators | 🔄 Planned | Commission on sales |
+
+### 🎯 Impact
+
+These revenue features will help sustain and grow GoNepal while providing genuine value to:
+- **Tourists**: Access to verified guides, better deals, personalized experiences
+- **Local Businesses**: Increased visibility to international tourists
+- **Guides**: Professional platform to find clients, grow their business
 
 ---
 

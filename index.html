@@ -3,33 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#E41B17" />
+    <meta name="theme-color" content="#16a34a" />
     <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#16a34a" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
     <title>GoNepal - Discover the Land of the Himalayas</title>
-    <!-- Deployment Trigger v2.5 -->
+    <!-- Deployment Trigger v2.7 -->
     <meta name="description" content="Plan your dream trip to Nepal. Explore Everest, ancient temples, wildlife safaris, and rich Nepali culture. Your gateway to the Himalayas." />
     <meta name="author" content="GoNepal" />
     <meta name="keywords" content="Nepal travel, Everest trek, Kathmandu, Pokhara, Himalaya mountains, Nepal tourism, trekking Nepal, Nepal adventure, GoNepal" />
 
+    <!-- Open Graph / Social Media -->
     <meta property="og:title" content="GoNepal - Discover the Land of the Himalayas" />
     <meta property="og:description" content="Plan your dream trip to Nepal. Explore Everest, ancient temples, wildlife safaris, and rich Nepali culture." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/favicon.ico" />
+    <meta property="og:image" content="/gonepallogo.png" />
     <meta property="og:url" content="https://go-nepal.vercel.app" />
+    <meta property="og:site_name" content="GoNepal" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@GoNepal" />
-    <meta name="twitter:image" content="/favicon.ico" />
+    <meta name="twitter:title" content="GoNepal - Discover the Land of the Himalayas" />
+    <meta name="twitter:image" content="/gonepallogo.png" />
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="canonical" href="https://go-nepal.vercel.app" />
+    
+    <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="manifest" href="/site.webmanifest" />
-    <link rel="canonical" href="https://go-nepal.vercel.app" />
-
+    
+    <!-- Fallback for older browsers -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    
     <!-- Performance optimizations -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,5 +53,20 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('SW registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
