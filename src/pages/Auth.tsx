@@ -99,6 +99,7 @@ const Auth = () => {
       if (error) {
         toast({ variant: 'destructive', title: 'Sign In Failed', description: getSafeErrorMessage(error) });
       } else {
+        // Wait for auth state to update, then check user
         setTimeout(async () => {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
@@ -106,26 +107,30 @@ const Auth = () => {
             const role = (profileCheck as any)?.role?.toLowerCase();
             const isAdminEmail = user.email === 'paudelnishant15@gmail.com';
             
+            // Handle Guide Role
             if (role === 'guide') {
               const kycStatus = profileCheck?.guide_applications?.[0]?.status;
               if (!kycStatus) navigate('/guide/kyc');
               else if (kycStatus === 'pending') navigate('/guide/pending');
               else if (kycStatus === 'approved') navigate('/guide/dashboard');
               else if (kycStatus === 'rejected') navigate('/guide/kyc?status=rejected');
-        // Check if user is already verified in this session
-        // Use a small delay to ensure sessionStorage is properly set
-        const isVaultUnlocked = sessionStorage.getItem('admin_vault_unlocked') === 'true';
-        
-        if (isVaultUnlocked) {
-          // Add a small delay to ensure auth state is fully propagated
-          setTimeout(() => navigate('/admin'), 100);
-        } else {
-          // Show verification modal for admin users
-          setShowAdminVerify(true);
-        }
-              // Regular user - go to home
-              navigate('/');
+              return;
             }
+            
+            // Handle Admin Role
+            if (role === 'admin' || isAdminEmail) {
+              // Check if already verified in this session
+              const isVaultUnlocked = sessionStorage.getItem('admin_vault_unlocked') === 'true';
+              if (isVaultUnlocked) {
+                setTimeout(() => navigate('/admin'), 100);
+              } else {
+                setShowAdminVerify(true);
+              }
+              return;
+            }
+            
+            // Regular user - go to home
+            navigate('/');
           }
         }, 800);
       }
