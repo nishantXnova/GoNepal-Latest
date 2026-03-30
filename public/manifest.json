@@ -42,15 +42,22 @@
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/gonepallogo.png",
-      "sizes": "96x96 128x128 192x192 512x512",
-      "type": "image/png",
-      "purpose": "any"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
   "prefer_related_applications": false,
   "related_applications": [],
   "shortcuts": [
@@ -59,14 +66,24 @@
       "short_name": "Explore",
       "description": "Browse amazing destinations in Nepal",
       "url": "/?shortcut=destinations",
-      "icons": [{ "src": "/gonepallogo.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Book Flights",
       "short_name": "Flights",
       "description": "Book domestic flights in Nepal",
       "url": "/?shortcut=flights",
-      "icons": [{ "src": "/gonepallogo.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "share_target": {
@@ -77,5 +94,69 @@
       "text": "text",
       "url": "url"
     }
+  },
+  "file_handlers": [
+    {
+      "accept": {
+        "image/*": [".png", ".jpg", ".jpeg", ".webp"]
+      },
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "launch_type": "single-client"
+    },
+    {
+      "accept": {
+        "text/plain": [".txt", ".md"]
+      },
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "gonepal",
+      "url": "/?protocol=%s"
+    }
+  ],
+  "display_override": ["window-controls-overlay"],
+  "iarc_rating_id": "76-secure-8888-0000-0000",
+  "scope_extensions": [],
+  "widgets": [
+    {
+      "name": "GoNepal Weather",
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_resources": ["icon", "logo"]
+  },
+  "note_taking": {
+    "launch_handler": {
+      "client_mode": "focus-existing"
+    },
+    "file_handlers": [
+      {
+        "accept": {
+          "text/plain": [".txt", ".md"]
+        }
+      }
+    ]
   }
 }

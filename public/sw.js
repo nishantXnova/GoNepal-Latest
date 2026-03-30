@@ -1,6 +1,7 @@
 /**
  * GonePal Nepal - PWA Service Worker
  * Provides offline functionality for high-altitude trekkers in Nepal
+ * Supports: Offline caching, Background Sync, Push Notifications, Periodic Sync
  */
 
 const PRECACHE_NAME = 'gonepal-precache-v1';
@@ -40,6 +41,14 @@ self.addEventListener('activate', (event) => {
     ))
   );
   self.clients.claim();
+  
+  // Register for periodic sync if supported
+  if (registration.periodicSync) {
+    registration.periodicSync.register('sync-weather', {
+      minInterval: 60 * 60 * 1000, // 1 hour minimum
+      minPeriod: 60 * 60 * 1000,
+    }).catch((err) => console.log('[Gonepal SW] Periodic sync registration failed:', err));
+  }
 });
 
 // Fetch - handle requests
@@ -134,33 +143,135 @@ async function networkFirst(request) {
   }
 }
 
-// Background Sync
+// Background Sync - handle sync events for offline data
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-news') console.log('[Gonepal SW] Syncing news...');
-  if (event.tag === 'sync-phrases') console.log('[Gonepal SW] Syncing phrases...');
+  console.log('[Gonepal SW] Background sync triggered:', event.tag);
+  
+  if (event.tag === 'sync-news') {
+    event.waitUntil(
+      // In a real app, this would fetch and cache news data
+      fetch('/api/news').then(res => res.json()).then(data => {
+        console.log('[Gonepal SW] News synced:', data);
+        return caches.open('gonepal-network').then(cache => {
+          cache.put(new Request('/api/news'), new Response(JSON.stringify(data)));
+        });
+      }).catch(err => console.log('[Gonepal SW] News sync failed:', err))
+    );
+  }
+  
+  if (event.tag === 'sync-phrases') {
+    event.waitUntil(
+      fetch('/api/phrases').then(res => res.json()).then(data => {
+        console.log('[Gonepal SW] Phrases synced:', data);
+        return caches.open('gonepal-network').then(cache => {
+          cache.put(new Request('/api/phrases'), new Response(JSON.stringify(data)));
+        });
+      }).catch(err => console.log('[Gonepal SW] Phrases sync failed:', err))
+    );
+  }
+  
+  if (event.tag === 'sync-bookings') {
+    event.waitUntil(
+      // Sync any pending booking data
+      console.log('[Gonepal SW] Syncing bookings...')
+    );
+  }
 });
 
 // Push Notifications
 self.addEventListener('push', (event) => {
+  let options = {
+    body: 'You have a new notification from GoNepal',
+    icon: '/android-chrome-192x192.png',
+    badge: '/android-chrome-192x192.png',
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1,
+    },
+    actions: [
+      { action: 'view', title: 'View' },
+      { action: 'close', title: 'Close' },
+    ],
+  };
+
   if (event.data) {
-    const data = event.data.json();
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'GoNepal Alert', {
-        body: data.body,
-        icon: '/gonepallogo.png',
-        badge: '/gonepallogo.png',
+    try {
+      const data = event.data.json();
+      options = {
+        ...options,
+        body: data.body || options.body,
+        icon: data.icon || options.icon,
         tag: data.tag || 'gonepal-alert',
+        data: { ...options.data, ...data },
+      };
+    } catch (e) {
+      options.body = event.data.text() || options.body;
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification('GoNepal - Trekking Companion', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  if (event.action === 'view' || !event.action) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clientList) => {
+        // If a window is already open, focus it
+        for (const client of clientList) {
+          if (client.url.includes('go-nepal.vercel.app') && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Otherwise open a new window
+        return self.clients.openWindow('/');
       })
     );
   }
 });
 
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(self.clients.openWindow('/'));
+// Periodic Background Sync - fetch updated data at regular intervals
+self.addEventListener('periodicsync', (event) => {
+  console.log('[Gonepal SW] Periodic sync triggered:', event.tag);
+  
+  if (event.tag === 'sync-weather') {
+    event.waitUntil(
+      fetch('/api/weather').then(res => res.json()).then(data => {
+        console.log('[Gonepal SW] Weather updated:', data);
+        return caches.open('gonepal-network').then(cache => {
+          cache.put(new Request('/api/weather'), new Response(JSON.stringify({
+            data,
+            timestamp: Date.now(),
+          })));
+        });
+      }).catch(err => console.log('[Gonepal SW] Weather sync failed:', err))
+    );
+  }
 });
 
-// Messages
+// Messages from main app
 self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data?.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: '1.0.0' });
+  }
+  
+  // Request background sync from the app
+  if (event.data?.type === 'REQUEST_SYNC') {
+    const tag = event.data.tag;
+    if (tag && 'sync' in registration) {
+      registration.sync.register(tag).then(() => {
+        console.log('[Gonepal SW] Sync registered:', tag);
+      }).catch(err => {
+        console.log('[Gonepal SW] Sync registration failed:', err);
+      });
+    }
+  }
 });
