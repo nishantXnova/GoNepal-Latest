@@ -72,8 +72,8 @@ const Hero = () => {
               transition={{ duration: 0.5, delay: 0.5 }}
               className="text-lg md:text-xl text-white/50 mb-12 max-w-2xl font-light leading-relaxed"
             >
-              Experience the majestic Himalayas and ancient wonders through a modern lens.
-              Your journey begins at the roof of the world.
+              Offline maps. 22 languages. AI trip planner. Digital Tourist ID.
+              Your journey begins with tools that actually work in the Himalayas.
             </motion.p>
 
             <motion.div
@@ -85,26 +85,24 @@ const Hero = () => {
               <Button
                 size="lg"
                 className="bg-[#FB923C] text-white hover:bg-[#E86C35] rounded-full px-10 py-7 text-lg font-medium transition-transform duration-200 hover:scale-105 active:scale-95 shadow-2xl"
-                onClick={() => navigate('/experiences')}
+                onClick={() => navigate('/trails')}
               >
                 Plan My Trek →
               </Button>
 
-              <Button
-                size="lg"
-                className="bg-white text-black hover:bg-white/90 rounded-full px-10 py-7 text-lg font-medium transition-transform duration-200 hover:scale-105 active:scale-95 shadow-2xl"
-                onClick={() => scrollToSection("destinations")}
+              <a
+                href="#destinations"
+                className="text-white/70 text-lg font-medium hover:text-white transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById('destinations');
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
               >
-                Start Exploring
-              </Button>
-
-              <button
-                onClick={() => scrollToSection("flights")}
-                className="group flex items-center gap-2 text-white text-lg font-medium hover:text-white/80 transition-colors"
-              >
-                Book Flights
-                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-              </button>
+                Explore destinations
+              </a>
             </motion.div>
 
             {/* Premium AI Trigger */}
@@ -119,8 +117,18 @@ const Hero = () => {
                 className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors duration-200 group"
               >
                 <Sparkles className="w-5 h-5 text-nepal-gold transition-transform group-hover:rotate-12" />
-                <span className="text-white/80 font-medium">✨ Design your perfect day with AI</span>
+                <span className="text-white/80 font-medium">Design your perfect day with AI</span>
               </button>
+            </motion.div>
+
+            {/* Social Proof */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.9 }}
+              className="mt-8 text-white/50 text-sm"
+            >
+              Built here, because no one else was going to 🇳🇵
             </motion.div>
           </div>
         </div>

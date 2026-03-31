@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogIn, Shield, Bookmark, Newspaper, BadgeCheck, ChevronDown, Package } from "lucide-react";
+import { Menu, X, User, LogIn, Shield, Bookmark, Newspaper, BadgeCheck, ChevronDown, Package, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import LanguageToggle from "./LanguageToggle";
@@ -130,6 +130,17 @@ const Navbar = () => {
           >
             <Newspaper className="w-4 h-4" />
             Insights
+          </Link>
+
+          {/* Reviews Link */}
+          <Link
+            to="/reviews"
+            id="reviews-link"
+            className={`font-medium tracking-wide transition-all duration-300 hover:text-accent cursor-pointer flex items-center gap-1.5 ${isScrolled ? "text-foreground" : "text-white/90"
+              }`}
+          >
+            <Star className="w-4 h-4 text-nepal-gold" />
+            Reviews
           </Link>
 
           {/* Travel Tools Dropdown Placeholder for now as I need to import it properly, 
@@ -275,6 +286,15 @@ const Navbar = () => {
             >
               <Newspaper className="w-4 h-4" />
               Travel News
+            </Link>
+
+            <Link
+              to="/reviews"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-foreground font-medium py-2 hover:text-accent transition-colors flex items-center gap-2"
+            >
+              <Star className="w-4 h-4 text-nepal-gold" />
+              Reviews
             </Link>
 
             {!loading && (

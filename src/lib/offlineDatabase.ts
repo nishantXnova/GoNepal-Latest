@@ -51,6 +51,15 @@ export interface MapTileCache {
   cachedAt: number;
 }
 
+export interface SecureLocationEntry {
+  id?: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  isHomeBase: boolean;
+  createdAt: Date;
+}
+
 // ============================================================================
 // Database Class
 // ============================================================================
@@ -60,6 +69,7 @@ class GonepalOfflineDB extends Dexie {
   news!: Table<NewsCacheItem>;
   translations!: Table<TranslationCacheEntry>;
   mapTiles!: Table<MapTileCache>;
+  pinnedLocations!: Table<SecureLocationEntry>;
 
   constructor() {
     super('GonepalOfflineDB');
@@ -67,7 +77,8 @@ class GonepalOfflineDB extends Dexie {
       phrases: '++id, english, category, cachedAt',
       news: '++id, title, isEmergency, cachedAt',
       translations: '++id, key, fromLang, toLang, cachedAt',
-      mapTiles: '++id, url, zoom, x, y, cachedAt'
+      mapTiles: '++id, url, zoom, x, y, cachedAt',
+      pinnedLocations: '++id, name, latitude, longitude, isHomeBase, createdAt'
     });
   }
 }
@@ -297,6 +308,52 @@ export const getCachedTileCount = async (): Promise<number> => {
  */
 export const isOnline = (): boolean => {
   return typeof navigator !== 'undefined' ? navigator.onLine : true;
+};
+
+// Pinned Locations functions
+export interface SecureLocationEntry {
+  id?: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  isHomeBase: boolean;
+  createdAt: Date;
+}
+
+export const savePinnedLocation = async (location: Omit<SecureLocationEntry, 'id'>): Promise<number> => {
+  try {
+    return await offlineDB.pinnedLocations.add(location as SecureLocationEntry);
+  } catch (error) {
+    console.error('[OfflineDB] Error saving pinned location:', error);
+    return -1;
+  }
+};
+
+export const getPinnedLocations = async (): Promise<SecureLocationEntry[]> => {
+  try {
+    return await offlineDB.pinnedLocations.toArray();
+  } catch (error) {
+    console.error('[OfflineDB] Error getting pinned locations:', error);
+    return [];
+  }
+};
+
+export const getHomeBaseLocation = async (): Promise<SecureLocationEntry | undefined> => {
+  try {
+    const locations = await offlineDB.pinnedLocations.toArray();
+    return locations.find(loc => loc.isHomeBase);
+  } catch (error) {
+    console.error('[OfflineDB] Error getting home base:', error);
+    return undefined;
+  }
+};
+
+export const deletePinnedLocation = async (id: number): Promise<void> => {
+  try {
+    await offlineDB.pinnedLocations.delete(id);
+  } catch (error) {
+    console.error('[OfflineDB] Error deleting pinned location:', error);
+  }
 };
 
 /**

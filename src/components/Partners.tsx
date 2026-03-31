@@ -110,7 +110,7 @@ const Partners = () => {
           className="text-center mb-6"
         >
           <h2 className="heading-section text-foreground mb-4">
-            Book With <span className="italic text-accent">Confidence</span>
+            Book With Confidence
           </h2>
           <p className="text-body-large text-muted-foreground max-w-2xl mx-auto">
             Best ways to plan and book your Nepal adventure — handpicked by our team.

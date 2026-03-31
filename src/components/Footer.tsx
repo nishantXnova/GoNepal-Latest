@@ -185,6 +185,9 @@ const Footer = () => {
             <p className="text-primary-foreground/80 font-semibold text-sm">
               © {currentYear} GoNepal.com. All rights reserved.
             </p>
+            <p className="text-primary-foreground/60 text-sm">
+              Built in Nepal 🇳🇵
+            </p>
 
             {/* Certifications / Payment Methods */}
             <div className="flex items-center gap-6 text-primary-foreground/60">

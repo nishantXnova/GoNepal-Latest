@@ -122,7 +122,8 @@ async function staleWhileRevalidate(request) {
   const cached = await caches.match(request);
   const fetchPromise = fetch(request).then((response) => {
     if (response.ok) {
-      caches.open('gonepal-static').then((c) => c.put(request, response.clone()));
+      const responseClone = response.clone();
+      caches.open('gonepal-static').then((c) => c.put(request, responseClone));
     }
     return response;
   }).catch(() => cached || new Response('Offline', { status: 503 }));

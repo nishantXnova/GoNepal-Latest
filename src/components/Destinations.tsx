@@ -49,13 +49,14 @@ const Destinations = () => {
               Curated Escapes
             </p>
             <h2 className="heading-section text-foreground leading-[1.1]">
-              Magnificent <span className="italic text-accent">Destinations</span> <br />
+              Places That Don't Forgive
+Being <span className="italic text-accent">Skipped</span> <br />
               Tailored for Discovery
             </h2>
           </div>
           <div className="mt-8 md:mt-0">
             <p className="text-muted-foreground max-w-sm text-sm leading-relaxed border-l-2 border-accent/20 pl-6">
-              Experience the pinnacle of Himalayan adventure through our carefully selected collection of Nepal's most iconic locations.
+              Every destination includes best season, altitude, difficulty rating, and offline map access.
             </p>
           </div>
         </motion.div>

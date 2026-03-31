@@ -67,11 +67,10 @@ const Categories = () => {
             Find Your Experience
           </p>
           <h2 className="heading-section text-foreground mb-4">
-            How Do You Want to <span className="italic text-accent">Explore?</span>
+            What Kind of Alive Do You Want to Feel?
           </h2>
           <p className="text-body-large text-muted-foreground max-w-2xl mx-auto">
-            Whether you seek adventure, culture, nature, or spiritual awakening,
-            Nepal offers experiences that will transform your journey.
+            Nepal doesn't do one thing. It does everything — violently well. Pick your obsession.
           </p>
         </motion.div>
 

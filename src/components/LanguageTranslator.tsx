@@ -404,7 +404,7 @@ const LanguageTranslator = () => {
           </span>
           <h2 className="heading-section text-foreground">Language Translator</h2>
           <p className="text-body-large text-muted-foreground mt-3 max-w-2xl mx-auto">
-            Travel confidently,Translate without sharing your data
+            Travel confidently, Translate without sharing your data
           </p>
         </div>
 

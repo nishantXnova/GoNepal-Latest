@@ -79,10 +79,10 @@ const SeasonalHighlights = () => {
             <div className="h-[1px] w-8 bg-accent" />
           </div>
           <h2 className="heading-section text-foreground leading-tight">
-            Nepal: Timeless in <span className="italic text-accent">Every Season</span>
+            Nepal Has No Off-Season. Just Different Moods.
           </h2>
           <p className="text-body-large text-muted-foreground max-w-2xl mx-auto font-light leading-relaxed">
-            From snow-capped peaks to lush summer valleys, discover the magnificent transformation of the Himalayas throughout the year.
+            Monsoon greens the jungle. Autumn clears the peaks. Winter silences everything. Spring makes you forget the others existed.
           </p>
         </motion.div>
 

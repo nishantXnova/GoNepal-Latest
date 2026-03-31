@@ -1,45 +1,63 @@
 import { motion } from "framer-motion";
-import { Plane, ExternalLink, Calendar, MapPin, Clock, ChevronDown, Globe } from "lucide-react";
+import { Plane, ExternalLink, Calendar, MapPin, Clock, ChevronDown, Globe, PlaneIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+// Airline website mapping with UTM tracking
+const airlineWebsites: Record<string, string> = {
+  "Yeti": "https://www.yetiairlines.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=route_card",
+  "Buddha Air": "https://www.buddhaair.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=route_card",
+  "Shree": "https://www.shreeairlines.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=route_card",
+  "Tara Air": "https://www.taraair.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=route_card",
+  "Saurya Air": "https://sauryaairlines.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=route_card",
+  "Nepal Airlines": "https://www.nepalairlines.com.np/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=route_card",
+};
 
 const popularRoutes = [
-  { from: "Kathmandu", to: "Pokhara", duration: "25 min", frequency: "Daily" },
-  { from: "Kathmandu", to: "Lukla", duration: "35 min", frequency: "Daily (weather permitting)" },
-  { from: "Pokhara", to: "Jomsom", duration: "20 min", frequency: "Daily" },
-  { from: "Kathmandu", to: "Bharatpur", duration: "25 min", frequency: "Daily" },
-  { from: "Kathmandu", to: "Biratnagar", duration: "35–40 min", frequency: "Daily" },
-  { from: "Kathmandu", to: "Nepalgunj", duration: "50–60 min", frequency: "Daily" },
+  { from: "Kathmandu", to: "Pokhara", duration: "25 min", frequency: "Daily", airlines: ["Buddha Air", "Yeti"] },
+  { from: "Kathmandu", to: "Lukla", duration: "35 min", frequency: "Daily (weather permitting)", airlines: ["Tara Air"] },
+  { from: "Pokhara", to: "Jomsom", duration: "20 min", frequency: "Daily", airlines: ["Tara Air"] },
+  { from: "Kathmandu", to: "Bharatpur", duration: "25 min", frequency: "Daily", airlines: ["Buddha Air", "Yeti"] },
+  { from: "Kathmandu", to: "Biratnagar", duration: "35–40 min", frequency: "Daily", airlines: ["Buddha Air", "Yeti"] },
+  { from: "Kathmandu", to: "Nepalgunj", duration: "50–60 min", frequency: "Daily", airlines: ["Yeti", "Shree"] },
 ];
 
 const airlines = [
   { 
     name: "Yeti Airlines", 
-    website: "https://www.yetiairlines.com/",
+    website: "https://www.yetiairlines.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=other_airlines",
     description: "Leading domestic carrier with extensive mountain route coverage",
     featured: true
   },
   { 
     name: "Buddha Air", 
-    website: "https://www.buddhaair.com/",
+    website: "https://www.buddhaair.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=other_airlines",
     description: "Premier domestic airline serving major destinations",
     featured: true
   },
   { 
     name: "Shree Airlines", 
-    website: "https://www.shreeairlines.com/",
+    website: "https://www.shreeairlines.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=other_airlines",
     description: "Reliable domestic flights with competitive pricing",
     featured: true
   },
   { 
     name: "Saurya Air", 
-    website: "https://sauryaairlines.com/",
+    website: "https://sauryaairlines.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=other_airlines",
     description: "Efficient domestic connectivity",
     featured: false
   },
   { 
     name: "Tara Air", 
-    website: "https://www.taraair.com/",
+    website: "https://www.taraair.com/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=other_airlines",
     description: "Mountain specialist with remote destination expertise",
     featured: false
   },
@@ -69,17 +87,74 @@ const itemVariants = {
 
 const FlightBooking = () => {
   const [showAllAirlines, setShowAllAirlines] = useState(false);
+  const [selectedRouteAirlines, setSelectedRouteAirlines] = useState<string[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedRouteName, setSelectedRouteName] = useState("");
   
   const handleBookFlight = () => {
-    window.open("https://www.nepalairlines.com.np/", "_blank", "noopener,noreferrer");
+    window.open("https://www.nepalairlines.com.np/?utm_source=gonepal&utm_medium=referral&utm_campaign=flight_routes&utm_content=book_confidently", "_blank", "noopener,noreferrer");
   };
 
   const handleAirlineClick = (website: string) => {
     window.open(website, "_blank", "noopener,noreferrer");
   };
 
+  const handleRouteAirlineClick = (airlines: string[], routeFrom: string, routeTo: string) => {
+    if (airlines.length === 1) {
+      // Single airline - redirect directly
+      const website = airlineWebsites[airlines[0]];
+      if (website) {
+        window.open(website, "_blank", "noopener,noreferrer");
+      }
+    } else {
+      // Multiple airlines - show dialog
+      setSelectedRouteAirlines(airlines);
+      setSelectedRouteName(`${routeFrom} – ${routeTo}`);
+      setIsDialogOpen(true);
+    }
+  };
+
+  const handleAirlineSelect = (airline: string) => {
+    const website = airlineWebsites[airline];
+    if (website) {
+      window.open(website, "_blank", "noopener,noreferrer");
+    }
+    setIsDialogOpen(false);
+  };
+
   return (
-    <section id="flights" className="section-padding bg-gradient-to-br from-nepal-sky/10 via-background to-accent/5">
+    <>
+      {/* Airline Selection Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plane className="h-5 w-5 text-orange-500" />
+              Choose Your Airline
+            </DialogTitle>
+            <DialogDescription>
+              Which airline would you like to book for the {selectedRouteName} route?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-3 py-4">
+            {selectedRouteAirlines.map((airline) => (
+              <button
+                key={airline}
+                onClick={() => handleAirlineSelect(airline)}
+                className="flex items-center justify-between p-4 rounded-xl border border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-900 dark:hover:to-amber-900 hover:border-orange-400 transition-all group"
+              >
+                <span className="font-semibold text-orange-700 dark:text-orange-300">{airline}</span>
+                <div className="flex items-center gap-2 text-sm text-orange-500 group-hover:text-orange-600">
+                  <span>Book Now</span>
+                  <ExternalLink className="h-4 w-4" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <section id="flights" className="section-padding bg-gradient-to-br from-nepal-sky/10 via-background to-accent/5">
       <div className="container-wide">
         {/* Section Header */}
         <motion.div
@@ -100,7 +175,7 @@ const FlightBooking = () => {
             <span className="text-sm font-medium">Flight Booking</span>
           </motion.div>
           <h2 className="heading-section text-foreground mb-4">
-            Book Your <span className="italic text-accent">Flights</span>
+            Book Your Flights
           </h2>
           <p className="text-body-large text-muted-foreground max-w-2xl mx-auto">
             Reach Nepal's remote destinations quickly with domestic flights. From scenic mountain flights to essential connections.
@@ -244,9 +319,9 @@ const FlightBooking = () => {
                   variants={itemVariants}
                   whileHover={{ x: 5, borderColor: "hsl(var(--accent) / 0.5)" }}
                   className="bg-card rounded-xl p-4 border border-border cursor-pointer transition-colors duration-300"
-                  onClick={handleBookFlight}
+                  onClick={() => handleRouteAirlineClick(route.airlines, route.from, route.to)}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-accent" />
@@ -262,14 +337,35 @@ const FlightBooking = () => {
                     </div>
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {route.duration}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{route.duration}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>{route.frequency}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {route.frequency}
+                    <div className="flex flex-col sm:items-end gap-1">
+                      <span className="text-xs font-semibold text-orange-500 uppercase tracking-wide">
+                        ✈️ Best Pick
+                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {route.airlines.map((airline, idx) => (
+                          <button 
+                            key={idx} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRouteAirlineClick(route.airlines, route.from, route.to);
+                            }}
+                            className="text-xs sm:text-sm bg-gradient-to-r from-orange-400/20 to-orange-500/20 text-orange-600 dark:text-orange-400 px-3 py-1 rounded-full border border-orange-400/30 font-semibold hover:from-orange-400/30 hover:to-orange-500/30 hover:border-orange-500/50 transition-all cursor-pointer"
+                          >
+                            {airline}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -293,6 +389,7 @@ const FlightBooking = () => {
         </div>
       </div>
     </section>
+    </>
   );
 };
 

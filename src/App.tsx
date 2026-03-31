@@ -14,6 +14,7 @@ import PageTransition from "./components/PageTransition";
 import OfflineIndicator from "./components/OfflineIndicator";
 import FloatingSOS from "./components/FloatingSOS";
 import OnboardingModal from "./components/OnboardingModal";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for code splitting
@@ -32,6 +33,7 @@ const Privacy = lazy(() => import("@/pages/Privacy"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const SharedItinerary = lazy(() => import("@/pages/SharedItinerary"));
 const FieldInterview = lazy(() => import("@/pages/FieldInterview"));
+const Reviews = lazy(() => import("@/pages/Reviews"));
 
 // Guide & Admin Routes
 const KYC = lazy(() => import("@/pages/guide/KYC"));
@@ -93,6 +95,7 @@ const AnimatedRoutes = () => {
           <Route path="/terms" element={<Terms />} />
           <Route path="/itinerary/:id" element={<SharedItinerary />} />
           <Route path="/field-interview" element={<FieldInterview />} />
+          <Route path="/reviews" element={<Reviews />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
@@ -101,27 +104,29 @@ const AnimatedRoutes = () => {
 };
 
 const App = () => (
-  <OfflineIndicator>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <LanguageProvider>
-          <AutoTranslator />
-          <WeatherProvider>
-            <WeatherForecast />
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <AnimatedRoutes />
-                <FloatingSOS />
-                <OnboardingModal />
-              </BrowserRouter>
-            </TooltipProvider>
-          </WeatherProvider>
-        </LanguageProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </OfflineIndicator>
+  <ErrorBoundary>
+    <OfflineIndicator>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <LanguageProvider>
+            <AutoTranslator />
+            <WeatherProvider>
+              <WeatherForecast />
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <AnimatedRoutes />
+                  <FloatingSOS />
+                  <OnboardingModal />
+                </BrowserRouter>
+              </TooltipProvider>
+            </WeatherProvider>
+          </LanguageProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </OfflineIndicator>
+  </ErrorBoundary>
 );
 
 export default App;

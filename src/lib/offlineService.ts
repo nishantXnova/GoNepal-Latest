@@ -1,4 +1,9 @@
 import { trackMetric } from "./metricsService";
+import { getSecureLocation, anonymizeLocation, isLocationInNepal, SecureLocation } from "./locationService";
+import { savePinnedLocation, getPinnedLocations, getHomeBaseLocation, deletePinnedLocation, SecureLocationEntry } from "./offlineDatabase";
+
+// Re-export for convenience
+export type { SecureLocationEntry };
 
 export interface DigitalID {
     name: string;
@@ -26,6 +31,11 @@ export interface CachedTripData {
     }[];
     digitalID?: DigitalID;
     timestamp: number;
+}
+
+// Extended type with pinned locations for offline map
+export interface CachedTripDataWithLocation extends CachedTripData {
+    pinnedLocations: SecureLocationEntry[];
 }
 
 // TTL Constants (in milliseconds)
@@ -101,3 +111,74 @@ export const clearCachedTrip = () => {
 };
 
 export const isOffline = () => !navigator.onLine;
+
+// ============================================================================
+// Secure Location Caching (for offline maps)
+// ============================================================================
+
+/**
+ * Cache current location as a pinned location for offline use
+ * Requires user consent and permission
+ */
+export const cacheCurrentLocation = async (
+    label: string = "Pinned Location",
+    requireConsent: boolean = true
+): Promise<{ success: boolean; location?: SecureLocationEntry; error?: string }> => {
+    try {
+        // Get secure location with user permission
+        const location = await getSecureLocation();
+        
+        // Save to IndexedDB for offline access
+        const id = await savePinnedLocation({
+            ...location,
+            isPinned: true,
+            pinLabel: label,
+        }, requireConsent);
+        
+        trackMetric('api_call');
+        
+        return {
+            success: true,
+            location: { ...location, id, isPinned: true, pinLabel: label } as SecureLocationEntry,
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        trackMetric('api_call');
+        return { success: false, error: errorMessage };
+    }
+};
+
+/**
+ * Get all cached pinned locations
+ */
+export const getCachedPinnedLocations = async (): Promise<SecureLocationEntry[]> => {
+    return await getPinnedLocations();
+};
+
+/**
+ * Get home base location (most recent pinned location)
+ */
+export const getCachedHomeBase = async (): Promise<SecureLocationEntry | null> => {
+    return await getHomeBaseLocation();
+};
+
+/**
+ * Delete a pinned location
+ */
+export const removePinnedLocation = async (id: number): Promise<void> => {
+    return await deletePinnedLocation(id);
+};
+
+/**
+ * Get trip data WITH pinned locations for map display
+ */
+export const getCachedTripWithLocations = async (): Promise<CachedTripDataWithLocation> => {
+    const tripData = getCachedTrip();
+    const pinnedLocations = await getPinnedLocations();
+    
+    return {
+        ...tripData,
+        pinnedLocations,
+    } as CachedTripDataWithLocation;
+};
+

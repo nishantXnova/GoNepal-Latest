@@ -135,8 +135,15 @@
     font-family: 'Playfair Display', serif;
   }
   
-  /* GPU acceleration for all animated elements */
-  *, *::before, *::after {
+  /* GPU acceleration for animated elements only */
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-in-left,
+  .animate-slide-in-right,
+  .animate-slide-up,
+  .animate-float,
+  [class*="animate-"] {
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }

@@ -87,7 +87,7 @@ const TravelInfo = () => {
             Travel Essentials
           </p>
           <h2 className="heading-section text-foreground mb-4">
-            Everything You <span className="italic text-accent">Need to Know</span>
+            Everything You Need to Know
           </h2>
           <p className="text-body-large text-muted-foreground max-w-2xl mx-auto">
             Practical information to help you prepare for your Nepal adventure.
