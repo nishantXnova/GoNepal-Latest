@@ -347,7 +347,7 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                                     </p>
                                                 )}
                                                 {nearestDistrictContact.difficultyLevel && (
-                                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${// In OfflineToolkit.tsx
                                                         nearestDistrictContact.difficultyLevel === 'extreme' ? 'bg-red-500/30 text-red-300' :
                                                         nearestDistrictContact.difficultyLevel === 'difficult' ? 'bg-orange-500/30 text-orange-300' :
                                                         nearestDistrictContact.difficultyLevel === 'moderate' ? 'bg-yellow-500/30 text-yellow-300' :
@@ -355,6 +355,21 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                                     }`}>
                                                         Difficulty: {nearestDistrictContact.difficultyLevel}
                                                     </span>
+                                                )}
+                                                {/* Season Awareness */}
+                                                {nearestDistrictContact.bestMonths && nearestDistrictContact.bestMonths.length > 0 && (
+                                                    <p className="text-slate-400 text-xs mt-1">
+                                                        <span className="text-cyan-300">Best Months:</span> {nearestDistrictContact.bestMonths.join(', ')}
+                                                    </p>
+                                                )}
+                                                {nearestDistrictContact.monsoonWarning && (
+                                                    <p className="text-yellow-500 text-xs">⚠️ Monsoon: Jun-Sep (landslides, floods)</p>
+                                                )}
+                                                {nearestDistrictContact.winterWarning && (
+                                                    <p className="text-blue-400 text-xs">❄️ Winter: Dec-Feb (extreme cold, snow)</p>
+                                                )}
+                                                {nearestDistrictContact.trekkingSeasonOpen === false && (
+                                                    <p className="text-red-400 text-xs font-semibold">🚫 Trekking NOT Recommended Currently</p>
                                                 )}
                                             </div>
                                         )}

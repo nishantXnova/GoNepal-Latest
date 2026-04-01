@@ -31,6 +31,11 @@ export interface DistrictEmergencyContact {
   nearestSettlement?: string; // Nearest village/town for ground rescue
   difficultyLevel?: 'easy' | 'moderate' | 'difficult' | 'extreme';
   helicopter?: string; // Direct helicopter rescue number
+  // Season awareness fields
+  bestMonths?: string[]; // e.g., ["Oct", "Nov", "Dec", "Mar", "Apr", "May"]
+  trekkingSeasonOpen?: boolean; // Whether currently safe to trek
+  monsoonWarning?: boolean; // Dangerous during June-September
+  winterWarning?: boolean; // Dangerous during December-February
 }
 
 // National emergency numbers (work nationwide - verified)
@@ -75,6 +80,11 @@ export const NEPAL_EMERGENCY_CONTACTS: Record<string, DistrictEmergencyContact> 
     nearestSettlement: 'Namche Bazaar',
     difficultyLevel: 'extreme',
     helicopter: '+977-1-4226606',
+    // Season awareness
+    bestMonths: ['Oct', 'Nov', 'Dec', 'Mar', 'Apr', 'May'],
+    trekkingSeasonOpen: true,
+    monsoonWarning: true, // June-September - Landslides, floods
+    winterWarning: true, // December-February - Extreme cold, snow
   },
   'Sankhuwasabha': {
     district: 'Sankhuwasabha',
@@ -358,6 +368,11 @@ export const NEPAL_EMERGENCY_CONTACTS: Record<string, DistrictEmergencyContact> 
     helicopterCompany: 'Yeti Airlines (primary), Buddha Air (backup)',
     nearestSettlement: 'Tikketo/ Chame',
     difficultyLevel: 'difficult',
+    // Season awareness
+    bestMonths: ['Oct', 'Nov', 'Dec', 'Mar', 'Apr', 'May'],
+    trekkingSeasonOpen: true,
+    monsoonWarning: true, // June-September - Landslides, flash floods
+    winterWarning: true, // December-February - Snow on passes
   },
   'Lamjung': {
     district: 'Lamjung',
