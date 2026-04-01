@@ -44,6 +44,8 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
     const [nearestDistrictContact, setNearestDistrictContact] = useState<DistrictEmergencyContact | null>(null);
     const [isDetectingLocation, setIsDetectingLocation] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
+    const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     // Get trekking regions for emergency contacts
     const trekkingRegions = getTrekkingRegions();
@@ -200,9 +202,38 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                             <p className="text-sm text-purple-300/70">Find emergency contacts near you</p>
                                         </div>
                                     </div>
+                                    
+                                    {/* Disclaimer - Must Accept Before Detection */}
+                                    <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
+                                        <div className="flex items-start gap-2 mb-2">
+                                            <input
+                                                type="checkbox"
+                                                id="locationDisclaimer"
+                                                checked={acceptedPrivacy}
+                                                onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                                                className="mt-1 w-4 h-4 rounded accent-yellow-500"
+                                            />
+                                            <label htmlFor="locationDisclaimer" className="text-yellow-200 text-xs leading-relaxed">
+                                                <strong className="text-yellow-100">⚠️ Privacy Notice:</strong> This feature requires your device's GPS location to find the nearest emergency services. Your location is processed locally on your device and is <strong>never stored or transmitted</strong> to any server. By using this feature, you agree to share your location with your device's browser for emergency contact purposes only.
+                                            </label>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="emergencyDisclaimer"
+                                                checked={acceptedTerms}
+                                                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                                className="mt-1 w-4 h-4 rounded accent-yellow-500"
+                                            />
+                                            <label htmlFor="emergencyDisclaimer" className="text-yellow-200 text-xs leading-relaxed">
+                                                <strong className="text-yellow-100">📱 Usage Agreement:</strong> Emergency numbers are provided as a reference only. GoNepal is not responsible for emergency service availability, response times, or call connectivity. In life-threatening situations, also contact local authorities through official channels.
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
                                     <button
                                         onClick={detectMyLocation}
-                                        disabled={isDetectingLocation}
+                                        disabled={isDetectingLocation || !acceptedPrivacy || !acceptedTerms}
                                         className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                                     >
                                         {isDetectingLocation ? (
@@ -213,7 +244,7 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                         ) : (
                                             <>
                                                 <MapPin className="h-4 w-4" />
-                                                Detect
+                                                {(acceptedPrivacy && acceptedTerms) ? 'Detect' : 'Accept Disclaimers First'}
                                             </>
                                         )}
                                     </button>
