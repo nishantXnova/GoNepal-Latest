@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
     MapPin, Phone, User, Cloud, AlertTriangle, 
     WifiOff, Wifi, Clock, ChevronDown, ChevronUp,
-    Globe, Shield, PhoneCall, Building2
+    Globe, Shield, PhoneCall, Building2, Navigation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -21,6 +21,7 @@ import {
     getTrekkingRegions,
     DistrictEmergencyContact
 } from "@/lib/emergencyContacts";
+import { getSecureLocation, isGeolocationSupported, getLocationPermissionStatus } from "@/lib/locationService";
 
 interface OfflineToolkitProps {
     isOpen: boolean;
@@ -37,9 +38,50 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
         weather: true,
         districtEmergency: true,
     });
+    
+    // GPS Detection State
+    const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
+    const [nearestDistrictContact, setNearestDistrictContact] = useState<DistrictEmergencyContact | null>(null);
+    const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+    const [locationError, setLocationError] = useState<string | null>(null);
 
     // Get trekking regions for emergency contacts
     const trekkingRegions = getTrekkingRegions();
+
+    // Function to detect GPS and find nearest emergency contacts
+    const detectMyLocation = async () => {
+        setIsDetectingLocation(true);
+        setLocationError(null);
+        
+        try {
+            // Check if geolocation is supported
+            if (!isGeolocationSupported()) {
+                setLocationError("Geolocation is not supported on this device");
+                return;
+            }
+            
+            // Check permission status
+            const permissionStatus = await getLocationPermissionStatus();
+            if (permissionStatus.status === 'denied') {
+                setLocationError("Location permission denied. Please enable in browser settings.");
+                return;
+            }
+            
+            // Get secure location
+            const location = await getSecureLocation();
+            
+            setUserLocation({ lat: location.lat, lng: location.lng });
+            
+            // Find nearest district based on GPS
+            const nearestContact = findNearestDistrict(location.lat, location.lng);
+            setNearestDistrictContact(nearestContact);
+            
+        } catch (error) {
+            setLocationError(error instanceof Error ? error.message : "Failed to get location");
+        } finally {
+            setIsDetectingLocation(false);
+        }
+    };
 
     // Load cached data and monitor online/offline status
     useEffect(() => {
@@ -145,6 +187,131 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="p-4 space-y-4">
+                        {/* GPS Detection & Nearest Emergency Section */}
+                        <div className="bg-gradient-to-r from-purple-900/50 to-indigo-900/50 rounded-2xl border border-purple-700/50 overflow-hidden">
+                            <div className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-purple-500/20 rounded-lg">
+                                            <Navigation className="h-5 w-5 text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-white">Detect My Location</h3>
+                                            <p className="text-sm text-purple-300/70">Find emergency contacts near you</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={detectMyLocation}
+                                        disabled={isDetectingLocation}
+                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                    >
+                                        {isDetectingLocation ? (
+                                            <>
+                                                <span className="animate-spin">⏳</span>
+                                                Detecting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <MapPin className="h-4 w-4" />
+                                                Detect
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                                
+                                {locationError && (
+                                    <div className="mb-3 p-2 bg-red-900/30 border border-red-800/50 rounded-lg text-red-300 text-sm">
+                                        {locationError}
+                                    </div>
+                                )}
+                                
+                                {userLocation && nearestDistrictContact && (
+                                    <div className="bg-slate-900/60 rounded-xl p-3 border border-purple-800/30">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div>
+                                                <p className="text-white font-semibold">{nearestDistrictContact.district}</p>
+                                                <p className="text-purple-300 text-sm">{nearestDistrictContact.province}</p>
+                                            </div>
+                                            {nearestDistrictContact.isTrekkingRegion && (
+                                                <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded-full font-medium">
+                                                    🏔️ Trekking Zone
+                                                </span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-3 gap-2 mb-2">
+                                            <a 
+                                                href={`tel:${nearestDistrictContact.police}`}
+                                                className="flex flex-col items-center justify-center bg-red-600/30 hover:bg-red-600/50 rounded-lg p-2 transition-colors"
+                                            >
+                                                <PhoneCall className="h-4 w-4 text-red-300 mb-1" />
+                                                <span className="text-white text-xs font-medium">Police</span>
+                                                <span className="text-red-200 text-xs">{nearestDistrictContact.police}</span>
+                                            </a>
+                                            <a 
+                                                href={`tel:${nearestDistrictContact.ambulance}`}
+                                                className="flex flex-col items-center justify-center bg-blue-600/30 hover:bg-blue-600/50 rounded-lg p-2 transition-colors"
+                                            >
+                                                <PhoneCall className="h-4 w-4 text-blue-300 mb-1" />
+                                                <span className="text-white text-xs font-medium">Ambulance</span>
+                                                <span className="text-blue-200 text-xs">{nearestDistrictContact.ambulance}</span>
+                                            </a>
+                                            <a 
+                                                href={`tel:${nearestDistrictContact.fire}`}
+                                                className="flex flex-col items-center justify-center bg-orange-600/30 hover:bg-orange-600/50 rounded-lg p-2 transition-colors"
+                                            >
+                                                <PhoneCall className="h-4 w-4 text-orange-300 mb-1" />
+                                                <span className="text-white text-xs font-medium">Fire</span>
+                                                <span className="text-orange-200 text-xs">{nearestDistrictContact.fire}</span>
+                                            </a>
+                                        </div>
+                                        
+                                        <div className="text-xs text-slate-400 space-y-1">
+                                            <p className="flex items-center gap-1">
+                                                <Building2 className="h-3 w-3" />
+                                                <span>Hospital: </span>
+                                                <span className="text-slate-300">{nearestDistrictContact.hospital}</span>
+                                            </p>
+                                            <p className="flex items-center gap-1">
+                                                <MapPin className="h-3 w-3" />
+                                                <span>Police Station: </span>
+                                                <span className="text-slate-300">{nearestDistrictContact.policeStation}</span>
+                                            </p>
+                                        </div>
+                                        
+                                        {nearestDistrictContact.helicopter && (
+                                            <div className="mt-2 pt-2 border-t border-purple-800/30">
+                                                <a 
+                                                    href={`tel:${nearestDistrictContact.helicopter}`}
+                                                    className="flex items-center justify-center gap-2 w-full bg-purple-600/30 hover:bg-purple-600/50 rounded-lg p-2 transition-colors"
+                                                >
+                                                    <span className="text-lg">🚁</span>
+                                                    <span className="text-purple-200 text-sm font-medium">Helicopter Rescue: {nearestDistrictContact.helicopter}</span>
+                                                </a>
+                                            </div>
+                                        )}
+                                        
+                                        {/* SMS Emergency Button */}
+                                        <div className="mt-2">
+                                            <a
+                                                href={`sms:${NATIONAL_EMERGENCY.emergencySMS}?body=${createEmergencySMS(userLocation.lat, userLocation.lng)}`}
+                                                className="flex items-center justify-center gap-2 w-full bg-green-600/30 hover:bg-green-600/50 rounded-lg p-2 transition-colors"
+                                            >
+                                                <PhoneCall className="h-4 w-4 text-green-300" />
+                                                <span className="text-green-200 text-sm">Send Emergency SMS with GPS</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {userLocation && !nearestDistrictContact && (
+                                    <div className="p-2 bg-yellow-900/30 border border-yellow-800/50 rounded-lg text-yellow-300 text-sm">
+                                        Location detected but no matching district found. Using national emergency numbers.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Home Base Section */}
                         {cachedData?.homeCoords && (
                             <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden">
