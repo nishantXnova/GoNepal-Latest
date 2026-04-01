@@ -73,6 +73,7 @@ To make Nepal accessible to every traveler by removing language barriers and pro
 | **Trekking region flags** | ✅ isTrekkingRegion: true for high-altitude areas | ❌ No distinction | ❌ No distinction | ❌ No distinction | ❌ No distinction | ❌ No distinction |
 | **Trekking-specific data** | ✅ Altitude, helipad, difficulty, season | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Season awareness** | ✅ bestMonths, monsoon/winter warnings | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None |
+| **Altitude sickness guide** | ✅ HACE, HAPE, AMS offline database | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Correct 2015 Constitution provinces** | ✅ Koshi, Madhesh, Bagmati, Gandaki, Lumbini, Karnali, Sudurpashchim | ❌ Often old zones | ❌ No administrative data | ❌ Old zones | ❌ Old zones | ❌ Old zones |
 
 ### 🌟 Firsts in Nepal Tourism Tech

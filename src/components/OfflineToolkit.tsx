@@ -22,6 +22,13 @@ import {
     DistrictEmergencyContact
 } from "@/lib/emergencyContacts";
 import { getSecureLocation, isGeolocationSupported, getLocationPermissionStatus } from "@/lib/locationService";
+import { 
+    HACE_DATA, 
+    HAPE_DATA, 
+    ALTITUDE_CONDITIONS, 
+    getAltitudeRiskAssessment,
+    TREKKING_REGION_ALTITUDES
+} from "@/lib/altitudeSickness";
 
 interface OfflineToolkitProps {
     isOpen: boolean;
@@ -37,6 +44,7 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
         digitalID: true,
         weather: true,
         districtEmergency: true,
+        altitudeSickness: true,
     });
     
     // GPS Detection State
@@ -46,6 +54,10 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
     const [locationError, setLocationError] = useState<string | null>(null);
     const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
+    
+    // Altitude Sickness Section State
+    const [selectedCondition, setSelectedCondition] = useState<string | null>(null);
+    const [userAltitude, setUserAltitude] = useState<number | null>(null);
 
     // Get trekking regions for emergency contacts
     const trekkingRegions = getTrekkingRegions();
@@ -393,6 +405,137 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        {/* Altitude Sickness Emergency Guide */}
+                        <div className="bg-red-950/30 rounded-2xl border border-red-800/30 overflow-hidden">
+                            <button
+                                onClick={() => toggleSection("altitudeSickness")}
+                                className="w-full flex items-center justify-between p-4 text-left hover:bg-red-900/20 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-red-500/20 rounded-lg">
+                                        <AlertTriangle className="h-5 w-5 text-red-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-red-100">Altitude Sickness Guide</h3>
+                                        <p className="text-sm text-red-300/70">HACE, HAPE, AMS - Know the signs</p>
+                                    </div>
+                                </div>
+                                {expandedSections.altitudeSickness ? (
+                                    <ChevronUp className="h-5 w-5 text-red-400" />
+                                ) : (
+                                    <ChevronDown className="h-5 w-5 text-red-400" />
+                                )}
+                            </button>
+                            {expandedSections.altitudeSickness && (
+                                <div className="px-4 pb-4 pt-0 space-y-3">
+                                    {/* Quick Emergency Checklist */}
+                                    <div className="bg-red-900/20 rounded-xl p-3 border border-red-800/20">
+                                        <p className="text-red-200 font-semibold text-sm mb-2">⚠️ When in doubt - DESCEND!</p>
+                                        <div className="space-y-1 text-xs text-red-300">
+                                            <p>• Can you walk in a straight line? → No = HACE → DESCEND</p>
+                                            <p>• Blue lips or pink sputum? → HAPE → DESCEND IMMEDIATELY</p>
+                                            <p>• Symptoms getting worse? → DESCEND - never wait</p>
+                                        </div>
+                                    </div>
+
+                                    {/* HACE Quick Reference */}
+                                    <div 
+                                        className={`bg-slate-900/50 rounded-xl p-3 border cursor-pointer transition-colors ${
+                                            selectedCondition === 'HACE' ? 'border-red-500' : 'border-slate-700/50'
+                                        }`}
+                                        onClick={() => setSelectedCondition(selectedCondition === 'HACE' ? null : 'HACE')}
+                                    >
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-red-400 font-semibold">HACE</span>
+                                            <span className="text-red-500 text-xs font-bold">CEREBRAL EDEMA</span>
+                                        </div>
+                                        <p className="text-slate-400 text-xs mb-2">Brain swelling - HEADACHE + CONFUSION + ATAXIA</p>
+                                        <p className="text-red-400 text-xs">⏱️ Mortality: ~50% untreated | Descend IMMEDIATELY</p>
+                                        {selectedCondition === 'HACE' && (
+                                            <div className="mt-2 pt-2 border-t border-red-800/30">
+                                                <p className="text-orange-300 text-xs font-semibold mb-1">Treatment:</p>
+                                                <ul className="text-xs text-slate-400 space-y-1">
+                                                    <li>• DESCEND - lowest point possible</li>
+                                                    <li>• Oxygen if available (2-4 L/min)</li>
+                                                    <li>• Dexamethasone 8mg initially</li>
+                                                    <li>• Keep warm, don't leave alone</li>
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* HAPE Quick Reference */}
+                                    <div 
+                                        className={`bg-slate-900/50 rounded-xl p-3 border cursor-pointer transition-colors ${
+                                            selectedCondition === 'HAPE' ? 'border-red-500' : 'border-slate-700/50'
+                                        }`}
+                                        onClick={() => setSelectedCondition(selectedCondition === 'HAPE' ? null : 'HAPE')}
+                                    >
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-red-400 font-semibold">HAPE</span>
+                                            <span className="text-red-500 text-xs font-bold">PULMONARY EDEMA</span>
+                                        </div>
+                                        <p className="text-slate-400 text-xs mb-2">Fluid in lungs - BREATHLESS + COUGH + PINK SPUTUM</p>
+                                        <p className="text-red-400 text-xs">⏱️ Mortality: ~50% untreated | Descend IMMEDIATELY</p>
+                                        {selectedCondition === 'HAPE' && (
+                                            <div className="mt-2 pt-2 border-t border-red-800/30">
+                                                <p className="text-orange-300 text-xs font-semibold mb-1">Treatment:</p>
+                                                <ul className="text-xs text-slate-400 space-y-1">
+                                                    <li>• DESCEND - sit upright, don't lie flat</li>
+                                                    <li>• Oxygen if available (4-6 L/min)</li>
+                                                    <li>• Nifedipine 20mg initially</li>
+                                                    <li>• Keep warm, minimize exertion</li>
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* AMS Quick Reference */}
+                                    <div 
+                                        className={`bg-slate-900/50 rounded-xl p-3 border cursor-pointer transition-colors ${
+                                            selectedCondition === 'AMS' ? 'border-yellow-500' : 'border-slate-700/50'
+                                        }`}
+                                        onClick={() => setSelectedCondition(selectedCondition === 'AMS' ? null : 'AMS')}
+                                    >
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-yellow-400 font-semibold">AMS</span>
+                                            <span className="text-yellow-500 text-xs font-bold">MILD</span>
+                                        </div>
+                                        <p className="text-slate-400 text-xs mb-2">Headache + fatigue + nausea - usually resolves with rest</p>
+                                        <p className="text-yellow-400 text-xs">⏱️ Rest and acclimatize - descend if worsens</p>
+                                        {selectedCondition === 'AMS' && (
+                                            <div className="mt-2 pt-2 border-t border-yellow-800/30">
+                                                <p className="text-yellow-300 text-xs font-semibold mb-1">Treatment:</p>
+                                                <ul className="text-xs text-slate-400 space-y-1">
+                                                    <li>• Rest at current altitude</li>
+                                                    <li>• Stay hydrated (3-4L water)</li>
+                                                    <li>• Avoid alcohol</li>
+                                                    <li>• Acetaminophen for headache</li>
+                                                    <li>• Descend if no improvement in 24h</li>
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Risk at Current Altitude */}
+                                    {nearestDistrictContact && nearestDistrictContact.altitudeMax && (
+                                        <div className="bg-orange-900/20 rounded-xl p-3 border border-orange-800/20">
+                                            <p className="text-orange-200 font-semibold text-sm mb-2">📍 Your Region: {nearestDistrictContact.district}</p>
+                                            <p className="text-slate-400 text-xs">
+                                                Altitude range: Up to {nearestDistrictContact.altitudeMax}m
+                                                {nearestDistrictContact.altitudeMax >= 5500 && (
+                                                    <span className="text-red-400 ml-2">⚠️ EXTREME - Death zone!</span>
+                                                )}
+                                                {nearestDistrictContact.altitudeMax >= 4000 && nearestDistrictContact.altitudeMax < 5500 && (
+                                                    <span className="text-orange-400 ml-2">⚠️ High risk area</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Home Base Section */}
