@@ -71,6 +71,8 @@ To make Nepal accessible to every traveler by removing language barriers and pro
 | **SMS with GPS coordinates** | ✅ createEmergencySMS() → Google Maps link | ❌ No SMS feature | ❌ No SMS | ❌ No SMS | ✅ Share location only | ❌ No SMS |
 | **National fallback numbers** | ✅ 100/102/101 verified nationwide | ❌ No verification | ❌ No phone numbers | ❌ No phone numbers | ❌ Outdated local numbers | ❌ Outdated local numbers |
 | **Trekking region flags** | ✅ isTrekkingRegion: true for high-altitude areas | ❌ No distinction | ❌ No distinction | ❌ No distinction | ❌ No distinction | ❌ No distinction |
+| **Trekking-specific data** | ✅ Altitude, helipad, difficulty, season | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None |
+| **Season awareness** | ✅ bestMonths, monsoon/winter warnings | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Correct 2015 Constitution provinces** | ✅ Koshi, Madhesh, Bagmati, Gandaki, Lumbini, Karnali, Sudurpashchim | ❌ Often old zones | ❌ No administrative data | ❌ Old zones | ❌ Old zones | ❌ Old zones |
 
 ### 🌟 Firsts in Nepal Tourism Tech
@@ -97,6 +99,7 @@ GoNepal isn't just another travel app — it's a complex platform with 15-20 int
 | **UI/UX** | Glassmorphic design + Framer Motion + Custom hooks | Standard Bootstrap/Tailwind |
 | **PWA** | Full PWA with BLE, push notifications, install prompt, file handlers, protocol handlers, window controls overlay, periodic sync | No PWA support |
 | **State** | Multiple contexts + Custom hooks + React Query | Basic useState/useContext |
+| **Emergency DB** | 76 districts, GPS detection, trekking data, season awareness | None |
 
 ### 📊 Our Architecture Achievements
 
