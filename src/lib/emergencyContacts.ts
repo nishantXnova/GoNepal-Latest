@@ -16,14 +16,21 @@ export interface DistrictCenter {
 
 export interface DistrictEmergencyContact {
   district: string;
-  province: string;
+  province: string; // 2015 Constitution names (Koshi, Madhesh, Bagmati, Gandaki, Lumbini, Karnali, Sudurpashchim)
   police: string;
   ambulance: string;
   fire: string;
-  policeStation: string;
+  policeStation: string; // Critical for offline fallback - local name helps guide ask locals
   hospital: string;
-  helicopter?: string;
   isTrekkingRegion: boolean;
+  // Trekking-specific fields (only present when isTrekkingRegion is true)
+  altitudeMin?: number; // Minimum altitude in meters
+  altitudeMax?: number; // Maximum altitude in meters
+  nearestHelipad?: string; // Name of nearest helicopter landing zone
+  helicopterCompany?: string; // Primary helicopter operator for this region
+  nearestSettlement?: string; // Nearest village/town for ground rescue
+  difficultyLevel?: 'easy' | 'moderate' | 'difficult' | 'extreme';
+  helicopter?: string; // Direct helicopter rescue number
 }
 
 // National emergency numbers (work nationwide - verified)
@@ -57,10 +64,17 @@ export const NEPAL_EMERGENCY_CONTACTS: Record<string, DistrictEmergencyContact> 
     police: '100',
     ambulance: '102',
     fire: '101',
-    policeStation: 'Salleri',
+    policeStation: 'Salleri', // Local name for offline fallback - ask locals for directions
     hospital: 'Solukhumbu District Hospital',
-    helicopter: '+977-1-4226606',
     isTrekkingRegion: true,
+    // Trekking-specific fields
+    altitudeMin: 1000,
+    altitudeMax: 8848, // Mount Everest
+    nearestHelipad: ' Lukla Airport (Tenzing-Hillary Airport)',
+    helicopterCompany: 'Simrik Air (primary), Buddha Air (backup)',
+    nearestSettlement: 'Namche Bazaar',
+    difficultyLevel: 'extreme',
+    helicopter: '+977-1-4226606',
   },
   'Sankhuwasabha': {
     district: 'Sankhuwasabha',
@@ -337,6 +351,13 @@ export const NEPAL_EMERGENCY_CONTACTS: Record<string, DistrictEmergencyContact> 
     policeStation: 'Pokhara',
     hospital: 'Pokhara Academy of Health Sciences',
     isTrekkingRegion: true,
+    // Trekking-specific fields (Annapurna Circuit/Base Camp)
+    altitudeMin: 800,
+    altitudeMax: 5416, // Annapurna I
+    nearestHelipad: 'Pokhara Regional Airport',
+    helicopterCompany: 'Yeti Airlines (primary), Buddha Air (backup)',
+    nearestSettlement: 'Tikketo/ Chame',
+    difficultyLevel: 'difficult',
   },
   'Lamjung': {
     district: 'Lamjung',

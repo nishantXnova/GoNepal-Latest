@@ -322,6 +322,43 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                             </div>
                                         )}
                                         
+                                        {/* Trekking-specific fields (only show when isTrekkingRegion is true) */}
+                                        {nearestDistrictContact.isTrekkingRegion && (
+                                            <div className="mt-2 pt-2 border-t border-purple-800/30 space-y-2">
+                                                <p className="text-purple-200 text-xs font-semibold">🏔️ Trekking Info</p>
+                                                {nearestDistrictContact.altitudeMin && nearestDistrictContact.altitudeMax && (
+                                                    <p className="text-slate-400 text-xs">
+                                                        <span className="text-purple-300">Altitude:</span> {nearestDistrictContact.altitudeMin}m - {nearestDistrictContact.altitudeMax}m
+                                                    </p>
+                                                )}
+                                                {nearestDistrictContact.nearestHelipad && (
+                                                    <p className="text-slate-400 text-xs">
+                                                        <span className="text-purple-300">Nearest Helipad:</span> {nearestDistrictContact.nearestHelipad}
+                                                    </p>
+                                                )}
+                                                {nearestDistrictContact.helicopterCompany && (
+                                                    <p className="text-slate-400 text-xs">
+                                                        <span className="text-purple-300">Helicopters:</span> {nearestDistrictContact.helicopterCompany}
+                                                    </p>
+                                                )}
+                                                {nearestDistrictContact.nearestSettlement && (
+                                                    <p className="text-slate-400 text-xs">
+                                                        <span className="text-purple-300">Nearest Town:</span> {nearestDistrictContact.nearestSettlement}
+                                                    </p>
+                                                )}
+                                                {nearestDistrictContact.difficultyLevel && (
+                                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                                        nearestDistrictContact.difficultyLevel === 'extreme' ? 'bg-red-500/30 text-red-300' :
+                                                        nearestDistrictContact.difficultyLevel === 'difficult' ? 'bg-orange-500/30 text-orange-300' :
+                                                        nearestDistrictContact.difficultyLevel === 'moderate' ? 'bg-yellow-500/30 text-yellow-300' :
+                                                        'bg-green-500/30 text-green-300'
+                                                    }`}>
+                                                        Difficulty: {nearestDistrictContact.difficultyLevel}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        
                                         {/* SMS Emergency Button */}
                                         <div className="mt-2">
                                             <a
