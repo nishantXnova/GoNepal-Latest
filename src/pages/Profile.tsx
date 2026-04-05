@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Camera, Save, Loader2, LogOut, Shield, Bookmark, LayoutDashboard } from 'lucide-react';
+import { User, Mail, Camera, Save, Loader2, LogOut, Shield, Bookmark, LayoutDashboard, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +19,7 @@ interface Profile {
 }
 
 const Profile = () => {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, isGuide } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -255,6 +255,20 @@ const Profile = () => {
                 </Button>
               </Link>
             </div>
+
+            {isGuide && (
+              <>
+                <hr className="border-border" />
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/guide/dashboard')}
+                  className="w-full"
+                >
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Guide Dashboard
+                </Button>
+              </>
+            )}
 
             {isAdmin && (
               <>

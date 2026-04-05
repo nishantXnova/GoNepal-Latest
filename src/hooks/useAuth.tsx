@@ -52,59 +52,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let isMounted = true;
 
-    try {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (!isMounted) return;
-
-          setSession(session);
-          const currentUser = session?.user ?? null;
-          setUser(currentUser);
-
-          if (currentUser) {
-            // Instant Admin Check
-            if (currentUser.email === 'paudelnishant15@gmail.com') {
-              setIsAdmin(true);
-            }
-            
-            await fetchProfile(currentUser.id, currentUser.email ?? undefined);
-            if (isMounted) setLoading(false);
-          } else {
-            setProfile(null);
-            setIsAdmin(false);
-            setIsGuide(false);
-            setLoading(false);
-          }
-        }
-      );
-
-      supabase.auth.getSession().then(({ data: { session } }) => {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
         if (!isMounted) return;
-        if (session) {
-          setSession(session);
-          setUser(session.user);
-          // Instant Admin Check
-          if (session.user.email === 'paudelnishant15@gmail.com') {
+
+        if (initialSession) {
+          setSession(initialSession);
+          const currentUser = initialSession.user;
+          setUser(currentUser);
+          
+          if (currentUser.email === 'paudelnishant15@gmail.com') {
             setIsAdmin(true);
           }
-          fetchProfile(session.user.id, session.user.email ?? undefined).finally(() => {
-            if (isMounted) setLoading(false);
-          });
+          
+          await fetchProfile(currentUser.id, currentUser.email ?? undefined);
+        }
+      } catch (error) {
+        logger.error('Auth initialization error:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        if (!isMounted) return;
+
+        setSession(currentSession);
+        const currentUser = currentSession?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          if (currentUser.email === 'paudelnishant15@gmail.com') {
+            setIsAdmin(true);
+          }
+          await fetchProfile(currentUser.id, currentUser.email ?? undefined);
         } else {
+          setProfile(null);
+          setIsAdmin(false);
+          setIsGuide(false);
           setLoading(false);
         }
-      }).catch(() => {
-        if (isMounted) setLoading(false);
-      });
+      }
+    );
 
-      return () => {
-        isMounted = false;
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      logger.warn('Auth initialization failed:', error);
-      if (isMounted) setLoading(false);
-    }
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string, role: string = 'traveller') => {

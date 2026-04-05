@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogIn, Shield, Bookmark, Newspaper, BadgeCheck, ChevronDown, Package, Star } from "lucide-react";
+import { Menu, X, User, LogIn, Shield, Bookmark, Newspaper, BadgeCheck, ChevronDown, Package, Star, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import LanguageToggle from "./LanguageToggle";
@@ -23,7 +23,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHomePage = location.pathname === "/";
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isGuide } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -143,10 +143,7 @@ const Navbar = () => {
             Reviews
           </Link>
 
-          {/* Travel Tools Dropdown Placeholder for now as I need to import it properly, 
-              but actually I can just use a simple list or improve the current one.
-              Wait, I'll use the proper DropdownMenu if I can.
-          */}
+          {/* Travel Tools Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={`flex items-center gap-1 font-medium tracking-wide transition-all duration-300 hover:text-accent outline-none ${isScrolled ? "text-foreground" : "text-white/90"}`}>
               Travel Tools <ChevronDown className="w-3 h-3 opacity-50" />
@@ -173,7 +170,7 @@ const Navbar = () => {
 
           {/* Auth/Profile Section */}
           <div className="flex items-center gap-4 ml-4 pl-4 border-l border-white/10">
-            {!loading && (
+            {!loading ? (
               user ? (
                 <div className="flex items-center gap-3">
                   {isAdmin && (
@@ -181,6 +178,7 @@ const Navbar = () => {
                       onClick={() => navigate("/admin")}
                       variant="ghost"
                       size="icon"
+                      title="Admin Dashboard"
                       className={`h-9 w-9 rounded-full transition-all duration-300 ${isScrolled
                         ? "text-foreground hover:bg-muted"
                         : "text-white hover:bg-white/10"
@@ -189,10 +187,25 @@ const Navbar = () => {
                       <Shield className="h-5 w-5" />
                     </Button>
                   )}
+                  {isGuide && (
+                    <Button
+                      onClick={() => navigate("/guide/dashboard")}
+                      variant="ghost"
+                      size="icon"
+                      title="Guide Dashboard"
+                      className={`h-9 w-9 rounded-full transition-all duration-300 ${isScrolled
+                        ? "text-foreground hover:bg-muted"
+                        : "text-white hover:bg-white/10"
+                        }`}
+                    >
+                      <Briefcase className="h-5 w-5" />
+                    </Button>
+                  )}
                   <Button
                     onClick={() => navigate("/saved-places")}
                     variant="ghost"
                     size="icon"
+                    title="Saved Places"
                     className={`h-9 w-9 rounded-full transition-all duration-300 ${isScrolled
                       ? "text-foreground hover:bg-muted"
                       : "text-white hover:bg-white/10"
@@ -205,6 +218,7 @@ const Navbar = () => {
                     onClick={() => navigate("/profile")}
                     variant="ghost"
                     size="icon"
+                    title="My Profile"
                     className={`h-9 w-9 rounded-full border border-white/10 transition-all duration-300 ${isScrolled
                       ? "text-foreground hover:bg-muted border-black/5"
                       : "text-white hover:bg-white/10"
@@ -228,6 +242,8 @@ const Navbar = () => {
                   </Button>
                 </div>
               )
+            ) : (
+              <div className="h-9 w-9 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
             )}
           </div>
         </div>
@@ -316,6 +332,19 @@ const Navbar = () => {
                       >
                         <Shield className="h-4 w-4 mr-2" />
                         Admin Dashboard
+                      </Button>
+                    )}
+                    {isGuide && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          navigate("/guide/dashboard");
+                        }}
+                      >
+                        <Briefcase className="h-4 w-4 mr-2" />
+                        Guide Dashboard
                       </Button>
                     )}
                     <Button
