@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Offline-first emergency database for 76 districts.</strong><br/>
+  <strong>Offline-first emergency database for 77 districts.</strong><br/>
   Works when Google Maps fails. Works when signal drops. Works when a tourist's life depends on it.
 </p>
 
@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/badge/Star_Us_on_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Star Us" />
   </a>
   <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge" alt="Version" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-orange?style=for-the-badge" alt="License" />
 </p>
 
 ---
@@ -65,7 +65,7 @@ To make Nepal accessible to every traveler by removing language barriers and pro
 | Feature | GoNepal | ghumNepal | PeakFinder | HoneyGuide | Google Maps | TripAdvisor |
 |---------|---------|-----------|------------|-------------|-------------|-------------|
 | **Works offline at 4,000m** | ✅ 100% embedded data | ❌ Requires booking internet | ✅ Maps only | ✅ Maps only | ❌ "No internet" | ❌ "No internet" |
-| **76/76 districts emergency data** | ✅ All districts (Solukhumbu to Humla) | ❌ Only popular spots | ❌ Peaks only | ❌ ~30 lodges | ❌ Major cities only | ❌ Major cities only |
+| **77/77 districts emergency data** | ✅ All districts (Solukhumbu to Humla) | ❌ Only popular spots | ❌ Peaks only | ❌ ~30 lodges | ❌ Major cities only | ❌ Major cities only |
 | **GPS auto-detection during panic** | ✅ findNearestDistrict(lat, lng) | ❌ Manual search | ✅ Navigation only | ✅ Navigation only | ❌ Requires online | ❌ Manual search |
 | **Helicopter rescue numbers embedded** | ✅ Buddha Air, Simrik Air, Yeti Airlines | ❌ No emergency contacts | ❌ No contacts | ❌ No contacts | ❌ No contacts | ❌ No contacts |
 | **SMS with GPS coordinates** | ✅ createEmergencySMS() → Google Maps link | ❌ No SMS feature | ❌ No SMS | ❌ No SMS | ✅ Share location only | ❌ No SMS |
@@ -94,13 +94,13 @@ GoNepal isn't just another travel app — it's a complex platform with 15-20 int
 | Feature | Our Approach | Others |
 |---------|---------------|--------|
 | **Translation** | MutationObserver-based real-time DOM translation with neural processing | Static pages or basic i18n |
-| **Offline** | Service Worker + IndexedDB (Dexie.js) + Background sync | None or basic cache |
+| **Offline** | Service Worker + IndexedDB (Dexie.js) + Custom Caching | None or basic cache |
 | **Maps** | Lightweight Leaflet + OpenStreetMap + Overpass API | Heavy Google Maps SDK |
 | **Data Fetching** | React Query with smart caching + Optimistic updates | Basic fetch or no caching |
-| **UI/UX** | Glassmorphic design + Framer Motion + Custom hooks | Standard Bootstrap/Tailwind |
-| **PWA** | Full PWA with BLE, push notifications, install prompt, file handlers, protocol handlers, window controls overlay, periodic sync | No PWA support |
+| **UI/UX** | Glassmorphic design + Framer Motion + Shadcn/UI | Standard Bootstrap/Tailwind |
+| **PWA** | Custom Service Worker with BLE, push notifications, install prompt, window controls overlay | No PWA support |
 | **State** | Multiple contexts + Custom hooks + React Query | Basic useState/useContext |
-| **Emergency DB** | 76 districts, GPS detection, trekking data, season awareness | None |
+| **Emergency DB** | 77 districts, GPS detection, trekking data, season awareness | None |
 
 ### 📊 Our Architecture Achievements
 
@@ -128,7 +128,7 @@ GoNepal integrates multiple complex subsystems:
 | **Weather Integration** | Open-Meteo API, Geocoding (Nominatim), AI activity planner |
 | **Map System** | Leaflet, OpenStreetMap, POI search (Overpass API), Geofencing |
 | **Authentication** | Supabase Auth, Profile management, Session handling |
-| **PWA Features** | Full PWA with file_handlers, launch_handler, protocol_handlers, window-controls-overlay, push notifications, background sync, periodic sync |
+| **PWA Features** | Advanced PWA with offline support, BLE, install prompt, window controls overlay, push notifications |
 | **State Management** | React contexts, Custom hooks, React Query caching |
 | **UI/UX Layer** | Framer Motion animations, Glassmorphic design, Responsive layouts |
 
@@ -239,7 +239,7 @@ GoNepal offers value to Nepal's tourism ecosystem:
 
 | Feature | Description |
 |---------|-------------|
-| **76/76 Districts Emergency Data** | All Nepal districts with police, ambulance, hospital contacts |
+| **77/77 Districts Emergency Data** | All Nepal districts with police, ambulance, hospital contacts |
 | **GPS Auto-Detection** | `findNearestDistrict(lat, lng)` instantly finds your district |
 | **Helicopter Rescue Numbers** | Buddha Air, Simrik Air, Yeti Airlines embedded for remote areas |
 | **SMS with GPS Proof** | `createEmergencySMS(lat, lng, name)` generates Google Maps link for insurance |
@@ -754,7 +754,7 @@ We welcome contributions! Please follow these steps:
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
