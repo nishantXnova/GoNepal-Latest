@@ -19,65 +19,80 @@ const SignupSuccess = () => {
   const role = searchParams.get('role');
   
   useEffect(() => {
+    let isMounted = true;
+    const timeoutId = setTimeout(() => {
+      if (isMounted && isConfirming) {
+        setIsConfirming(false);
+        console.log('Auth confirmation timed out');
+      }
+    }, 15000);
+
     const handleAuthRedirect = async () => {
       setIsConfirming(true);
       
       try {
-        // 1. Check Hash Params (Implicit Flow / Old Supabase)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-
-        // 2. Check Search Params (PKCE Flow / New Supabase)
         const code = searchParams.get('code');
-        const type = searchParams.get('type');
 
         if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({ 
+          await supabase.auth.setSession({ 
             access_token: accessToken, 
             refresh_token: refreshToken 
           });
-          if (error) throw error;
-          setConfirmationStatus('success');
+          if (isMounted) setConfirmationStatus('success');
         } else if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-          setConfirmationStatus('success');
+          await supabase.auth.exchangeCodeForSession(code);
+          if (isMounted) setConfirmationStatus('success');
         } else {
-          // Check if session already exists (e.g. user clicked link and is already logged in)
           const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
+          if (session && isMounted) {
             setConfirmationStatus('success');
-          } else if (type === 'signup' || type === 'invite') {
-             setConfirmationStatus('pending');
           }
         }
       } catch (err: any) {
         console.error('Verification error:', err);
-        setConfirmationStatus('error');
-        toast({ variant: 'destructive', title: 'Verification failed', description: err.message });
+        if (isMounted) {
+          setConfirmationStatus('error');
+          toast({ variant: 'destructive', title: 'Verification failed', description: err.message });
+        }
       } finally {
-        setIsConfirming(false);
+        if (isMounted) setIsConfirming(false);
+        clearTimeout(timeoutId);
       }
     };
 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && isMounted) {
+        setConfirmationStatus('success');
+        setIsConfirming(false);
+        clearTimeout(timeoutId);
+      }
+    });
+
     handleAuthRedirect();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, [searchParams, toast]);
 
-  // Once confirmed, redirect based on user role
   useEffect(() => {
     if (confirmationStatus === 'success') {
       const redirect = async () => {
         try {
+          // Force profile refresh to ensure role is up to date
           await refreshProfile();
           
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
             const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-            const userRole = profile?.role?.toLowerCase() || role?.toLowerCase() || 'traveller';
+            const userRole = (profile?.role || role || 'traveller').toLowerCase();
             
             if (userRole === 'guide') {
-              // Check if they already have an application
               const { data: app } = await supabase.from('guide_applications').select('status').eq('user_id', user.id).maybeSingle();
               if (!app) navigate('/guide/kyc');
               else if (app.status === 'pending') navigate('/guide/pending');
@@ -96,8 +111,7 @@ const SignupSuccess = () => {
         }
       };
       
-      // Small delay to ensure session is fully propagated
-      const timer = setTimeout(redirect, 500);
+      const timer = setTimeout(redirect, 1000);
       return () => clearTimeout(timer);
     }
   }, [confirmationStatus, navigate, refreshProfile, role]);
