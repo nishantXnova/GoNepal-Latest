@@ -6,7 +6,7 @@ import {
   Filter, Eye, Loader2, AlertCircle,
   FileText, User, Phone, MapPin, 
   ArrowLeft, CheckCircle2, MoreVertical,
-  RefreshCw, Clock, Mail, Award, Globe
+  RefreshCw, Clock, Mail, Award, Globe, Briefcase
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -247,66 +247,128 @@ const AdminApplications = () => {
                 </div>
               </div>
 
-              <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <section className="space-y-6">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Professional Profile</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <Award className="w-5 h-5 text-primary mt-1" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">NTB License</p>
-                        <p className="text-slate-900 font-bold">{selectedApp.ntb_license_number}</p>
+              <div className="p-8 space-y-10">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* LEFT COLUMN: Identity & Credentials */}
+                  <section className="space-y-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                       <User className="w-4 h-4" /> Identity & Verification
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Citizenship Number</p>
+                        <p className="text-slate-900 font-bold mt-1">{selectedApp.citizenship_number || 'N/A'}</p>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">NTB License & Expiry</p>
+                        <p className="text-slate-900 font-bold mt-1">
+                          {selectedApp.ntb_license_number} 
+                          <span className="text-slate-400 font-medium ml-2">
+                            (Expires: {selectedApp.license_expiry_date ? new Date(selectedApp.license_expiry_date).toLocaleDateString() : 'N/A'})
+                          </span>
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <MapPin className="w-5 h-5 text-primary mt-1" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Regions Covered</p>
+
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2 pt-4">
+                       <Briefcase className="w-4 h-4" /> Expertise & Safety
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Max Group Size</p>
+                            <p className="text-slate-900 font-bold mt-1">{selectedApp.max_group_size || '10'} Persons</p>
+                          </div>
+                          <Badge className={selectedApp.first_aid_certified ? "bg-green-500" : "bg-slate-300"}>
+                            {selectedApp.first_aid_certified ? "First Aid Certified" : "No First Aid"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">High Altitude Experience</p>
+                        <p className="text-sm text-slate-600 mt-1">{selectedApp.high_altitude_exp || 'Regular trekking peaks'}</p>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Regions & Languages</p>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {selectedApp.regions?.map((r: string) => <Badge key={r} variant="secondary" className="bg-white border-slate-200">{r}</Badge>)}
                         </div>
+                        <p className="text-xs font-bold text-slate-900 mt-3">{selectedApp.languages?.join(' • ')}</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <Globe className="w-5 h-5 text-primary mt-1" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Languages</p>
-                        <p className="text-sm font-bold text-slate-900 mt-1">{selectedApp.languages?.join(', ')}</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
+                  </section>
 
-                <section className="space-y-6">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Documents Verification</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: 'Citizenship', key: 'citizenship_url' },
-                      { label: 'NTB License', key: 'trekking_license_url' },
-                      { label: 'Training', key: 'training_cert_url' },
-                      { label: 'Insurance', key: 'insurance_cert_url' },
-                      { label: 'Portrait', key: 'passport_photo_url' },
-                      { label: 'Agency Letter', key: 'agency_letter_url' },
-                    ].map((doc) => (
-                      <div key={doc.key} className="group relative rounded-xl border border-slate-100 p-4 transition-all hover:bg-slate-50">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{doc.label}</p>
-                        {selectedApp[doc.key] ? (
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-primary" />
-                            <a 
-                              href={supabase.storage.from('guide-kyc-docs').getPublicUrl(selectedApp[doc.key]).data.publicUrl} 
-                              target="_blank" 
-                              className="text-xs font-black text-slate-900 hover:text-primary transition-colors flex items-center gap-1"
-                            >
-                              View PDF <ExternalLink className="w-2.5 h-2.5" />
-                            </a>
+                  {/* RIGHT COLUMN: Business & Documents */}
+                  <section className="space-y-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                       <Clock className="w-4 h-4" /> Business & Availability
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Daily Rate</p>
+                            <p className="text-slate-900 font-black text-xl mt-1">NPR {selectedApp.daily_rate?.toLocaleString() || '0'}</p>
                           </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-300">Not Provided</span>
-                        )}
+                          <div className={`p-2 rounded-lg text-[10px] font-bold uppercase ${selectedApp.has_porter_contacts ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
+                            {selectedApp.has_porter_contacts ? 'Has Porter Contacts' : 'No Porter Network'}
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Availability Schedule</p>
+                        <p className="text-sm text-slate-600 mt-1">{selectedApp.availability_text || 'Standard availability'}</p>
+                      </div>
+                    </div>
+
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2 pt-4">
+                       <FileText className="w-4 h-4" /> Documents Review
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Citizenship', key: 'citizenship_url' },
+                        { label: 'License', key: 'trekking_license_url' },
+                        { label: 'Training', key: 'training_cert_url' },
+                        { label: 'Portrait', key: 'passport_photo_url' },
+                      ].map((doc) => (
+                        <div key={doc.key} className="group relative rounded-xl border border-slate-100 p-4 transition-all hover:bg-slate-50 bg-white shadow-sm shadow-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{doc.label}</p>
+                          {selectedApp[doc.key] ? (
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-primary" />
+                              <a 
+                                href={supabase.storage.from('guide-kyc-docs').getPublicUrl(selectedApp[doc.key]).data.publicUrl} 
+                                target="_blank" 
+                                className="text-[10px] font-black text-slate-900 hover:text-primary transition-colors flex items-center gap-1"
+                              >
+                                View <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-300">Missing</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                {/* SOCIAL PROOF SECTION (Full Width) */}
+                <section className="space-y-4 pt-4 border-t border-slate-100">
+                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4" /> Social Proof & References
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Previous Agency</p>
+                          <p className="text-sm text-slate-900 font-bold mt-1">{selectedApp.previous_agency || 'Independent / Freelance'}</p>
+                       </div>
+                       <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">References</p>
+                          <p className="text-sm text-slate-600 italic mt-1 leading-relaxed">"{selectedApp.references_text || 'No references provided'}"</p>
+                       </div>
+                    </div>
                 </section>
               </div>
 

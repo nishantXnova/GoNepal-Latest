@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,18 +25,28 @@ const kycSchema = z.object({
   email: z.string().email("Valid email required"),
   dob: z.string().min(1, "Date of birth is required"),
   address: z.string().min(5, "Address is required"),
+  citizenshipNumber: z.string().min(1, "Citizenship number is required"),
   ntbLicense: z.string().min(1, "License number is required"),
+  licenseExpiry: z.string().min(1, "Expiry date is required"),
   guideType: z.enum(['trekking', 'tour', 'both']),
-  yearsExperience: z.string(),
+  yearsExperience: z.string().min(1, "Required"),
   regions: z.array(z.string()).min(1, "Select at least one region"),
   languages: z.array(z.string()).min(1, "Select at least one language"),
+  maxGroupSize: z.string().min(1, "Required"),
+  firstAidCertified: z.boolean().default(false),
+  highAltitudeExp: z.string().optional(),
+  dailyRate: z.string().min(1, "Required"),
+  availabilityText: z.string().min(1, "Required"),
+  hasPorterContacts: z.boolean().default(false),
+  previousAgency: z.string().optional(),
+  referencesText: z.string().min(1, "Please provide at least one reference"),
 });
 
 const STEPS = [
-  { id: 1, name: 'Personal', icon: User },
-  { id: 2, name: 'Identity', icon: Award },
-  { id: 3, name: 'Documents', icon: FileText },
-  { id: 4, name: 'Experience', icon: Briefcase },
+  { id: 1, name: 'Identity', icon: User },
+  { id: 2, name: 'Credentials', icon: Award },
+  { id: 3, name: 'Expertise', icon: Briefcase },
+  { id: 4, name: 'Business', icon: CheckCircle },
 ];
 
 const KYC = () => {
@@ -88,11 +99,21 @@ const KYC = () => {
       email: user?.email || '',
       dob: '',
       address: '',
+      citizenshipNumber: '',
       ntbLicense: '',
+      licenseExpiry: '',
       guideType: 'trekking',
       yearsExperience: '0',
       regions: [],
-      languages: [],
+      languages: ['Nepali', 'English'],
+      maxGroupSize: '10',
+      firstAidCertified: false,
+      highAltitudeExp: '',
+      dailyRate: '2500',
+      availabilityText: '',
+      hasPorterContacts: false,
+      previousAgency: '',
+      referencesText: '',
     }
   });
 
@@ -124,10 +145,10 @@ const KYC = () => {
   };
 
   const onSubmit = async (values: any) => {
-    const requiredFiles = ['citizenship', 'trekkingLicense', 'trainingCert', 'insuranceCert', 'passportPhoto'];
+    const requiredFiles = ['citizenship', 'trekkingLicense', 'passportPhoto'];
     const missing = requiredFiles.filter(f => !files[f]);
     if (missing.length > 0) {
-      toast({ title: "Missing documents", description: `Please upload all required documents.`, variant: "destructive" });
+      toast({ title: "Missing documents", description: `Please upload Required: ${missing.join(', ')}`, variant: "destructive" });
       return;
     }
 
@@ -141,11 +162,21 @@ const KYC = () => {
         email: values.email,
         dob: values.dob,
         address: values.address,
+        citizenship_number: values.citizenshipNumber,
         ntb_license_number: values.ntbLicense,
+        license_expiry_date: values.licenseExpiry,
         guide_type: values.guideType,
         years_experience: parseInt(values.yearsExperience),
         regions: values.regions,
         languages: values.languages,
+        max_group_size: parseInt(values.maxGroupSize),
+        first_aid_certified: values.firstAidCertified,
+        high_altitude_exp: values.highAltitudeExp,
+        daily_rate: parseFloat(values.dailyRate),
+        availability_text: values.availabilityText,
+        has_porter_contacts: values.hasPorterContacts,
+        previous_agency: values.previousAgency,
+        references_text: values.referencesText,
         citizenship_url: uploadedPaths.citizenship,
         passport_photo_url: uploadedPaths.passportPhoto,
         trekking_license_url: uploadedPaths.trekkingLicense,
@@ -208,98 +239,157 @@ const KYC = () => {
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
                   <motion.div key="step1" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     <FormField control={form.control} name="fullName" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Full Name</FormLabel><FormControl><Input placeholder="John Doe" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
+                    <FormField control={form.control} name="fullName" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Full Legal Name</FormLabel><FormControl><Input placeholder="John Doe" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={form.control} name="email" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Email Address</FormLabel><FormControl><Input {...field} readOnly className="bg-slate-100 border-none rounded-2xl py-6 px-5 opacity-60" /></FormControl></FormItem>
+                    <FormField control={form.control} name="citizenshipNumber" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Citizenship Number (Nepal ID)</FormLabel><FormControl><Input placeholder="12-34-56-789" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="phone" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Phone Number</FormLabel><FormControl><Input placeholder="+977 98..." className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Phone Number</FormLabel><FormControl><Input placeholder="+977 98..." className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="dob" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Date of Birth</FormLabel><FormControl><Input type="date" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Date of Birth</FormLabel><FormControl><Input type="date" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <div className="md:col-span-2">
-                       <FormField control={form.control} name="address" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Residential Address</FormLabel><FormControl><Input placeholder="Kathmandu, Nepal..." className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
-                      )} />
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div onClick={() => document.getElementById('portrait')?.click()} className={`h-[180px] border-2 border-dashed rounded-[32px] flex flex-col items-center justify-center transition-all cursor-pointer ${files.passportPhoto ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200 bg-slate-50'}`}>
+                        <input type="file" id="portrait" className="hidden" onChange={(e) => handleFileChange(e, 'passportPhoto')} accept="image/*" />
+                        {fileUrls.passportPhoto ? <img src={fileUrls.passportPhoto} className="w-24 h-24 rounded-full object-cover" /> : <ImageIcon className="w-10 h-10 text-slate-300" />}
+                        <p className="mt-4 text-xs font-black uppercase text-slate-400 tracking-widest">Profile Photo</p>
+                      </div>
+                      <div onClick={() => document.getElementById('citizenship')?.click()} className={`h-[180px] border-2 border-dashed rounded-[32px] flex flex-col items-center justify-center transition-all cursor-pointer ${files.citizenship ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200 bg-slate-50'}`}>
+                        <input type="file" id="citizenship" className="hidden" onChange={(e) => handleFileChange(e, 'citizenship')} />
+                        {files.citizenship ? <CheckCircle className="w-10 h-10 text-primary" /> : <Upload className="w-10 h-10 text-slate-300" />}
+                        <p className="mt-4 text-xs font-black uppercase text-slate-400 tracking-widest">Citizenship Scan</p>
+                      </div>
                     </div>
                   </motion.div>
                 )}
 
                 {currentStep === 2 && (
-                  <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                     <div className="space-y-4">
-                        <label className="text-xs uppercase font-black text-slate-400 tracking-widest">Citizenship Document</label>
-                        <div onClick={() => document.getElementById('citizenship')?.click()} className={`h-[200px] border-2 border-dashed rounded-[32px] flex flex-col items-center justify-center transition-all cursor-pointer ${files.citizenship ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200 bg-slate-50'}`}>
-                          <input type="file" id="citizenship" className="hidden" onChange={(e) => handleFileChange(e, 'citizenship')} />
-                          {files.citizenship ? <CheckCircle className="w-12 h-12 text-primary" /> : <Upload className="w-12 h-12 text-slate-300" />}
-                          <p className="mt-4 text-sm font-bold text-slate-600">{files.citizenship ? files.citizenship.name : 'Select PDF or Map'}</p>
+                  <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <FormField control={form.control} name="ntbLicense" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">License Number</FormLabel><FormControl><Input placeholder="G-4455..." className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="licenseExpiry" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">License Expiry Date</FormLabel><FormControl><Input type="date" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="yearsExperience" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Years of Experience</FormLabel><FormControl><Input type="number" min="0" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {['trekkingLicense', 'trainingCert', 'insuranceCert'].map((doc) => (
+                        <div key={doc} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-between group transition-all hover:border-slate-200">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-slate-100">
+                              <FileText className={`w-5 h-5 ${files[doc] ? 'text-primary' : 'text-slate-300'}`} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase text-slate-600 tracking-wider">
+                              {doc.replace(/([A-Z])/g, ' $1')}
+                            </span>
+                          </div>
+                          <input type="file" id={doc} className="hidden" onChange={(e) => handleFileChange(e, doc)} />
+                          <Button type="button" variant="ghost" className="text-primary font-black uppercase text-[10px] tracking-widest" onClick={() => document.getElementById(doc)?.click()}>
+                            {files[doc] ? 'Change' : 'Upload'}
+                          </Button>
                         </div>
-                     </div>
-                     <div className="space-y-4">
-                        <label className="text-xs uppercase font-black text-slate-400 tracking-widest">Self Portrait (Passport Size)</label>
-                        <div onClick={() => document.getElementById('portrait')?.click()} className={`h-[200px] border-2 border-dashed rounded-[32px] flex flex-col items-center justify-center transition-all cursor-pointer ${files.passportPhoto ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200 bg-slate-50'}`}>
-                          <input type="file" id="portrait" className="hidden" onChange={(e) => handleFileChange(e, 'passportPhoto')} accept="image/*" />
-                          {fileUrls.passportPhoto ? <img src={fileUrls.passportPhoto} className="w-24 h-24 rounded-full object-cover" /> : <ImageIcon className="w-12 h-12 text-slate-300" />}
-                          <p className="mt-4 text-sm font-bold text-slate-600">Upload Portrait</p>
-                        </div>
-                     </div>
+                      ))}
+                    </div>
                   </motion.div>
                 )}
 
                 {currentStep === 3 && (
-                   <motion.div key="step3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                      <FormField control={form.control} name="ntbLicense" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">License Number</FormLabel><FormControl><Input placeholder="G-4455..." className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
-                      )} />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                         {['trekkingLicense', 'trainingCert', 'insuranceCert', 'cv'].map((doc) => (
-                           <div key={doc} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                             <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-slate-400" /><span className="text-xs font-bold text-slate-600">{files[doc] ? 'Documented' : doc.replace(/([A-Z])/g, ' $1').toUpperCase()}</span></div>
-                             <input type="file" id={doc} className="hidden" onChange={(e) => handleFileChange(e, doc)} />
-                             <Button type="button" variant="ghost" className="text-primary font-bold" onClick={() => document.getElementById(doc)?.click()}>{files[doc] ? 'Edit' : 'Add'}</Button>
-                           </div>
-                         ))}
+                  <motion.div key="step3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+                    <FormField control={form.control} name="guideType" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Specialization</FormLabel>
+                        <div className="flex bg-slate-100 p-1.5 rounded-2xl mt-2">
+                          {['trekking', 'tour', 'both'].map(t => (
+                            <button key={t} type="button" onClick={() => field.onChange(t)} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${field.value === t ? 'bg-white shadow-sm text-slate-900 border border-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}>{t}</button>
+                          ))}
+                        </div>
+                      </FormItem>
+                    )} />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                       <FormField control={form.control} name="maxGroupSize" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Max Group Size</FormLabel><FormControl><Input type="number" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
+                       )} />
+                       <div className="flex flex-col gap-4">
+                          <FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Safety Certifications</FormLabel>
+                          <div className="flex items-center gap-3">
+                             <input type="checkbox" id="firstaid" {...form.register('firstAidCertified')} className="w-5 h-5 rounded-lg border-slate-200 text-primary focus:ring-primary" />
+                             <label htmlFor="firstaid" className="text-sm font-bold text-slate-600">Wilderness First Aid Certified</label>
+                          </div>
+                       </div>
+                    </div>
+
+                    <FormField control={form.control} name="highAltitudeExp" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">High Altitude Experience (Optional)</FormLabel><FormControl><Input placeholder="E.g. Island Peak, Mera Peak..." className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
+                    )} />
+
+                    <div className="space-y-4">
+                      <label className="text-xs uppercase font-black text-slate-400 tracking-widest">Districts / Regions of Expertise</label>
+                      <div className="flex flex-wrap gap-2">
+                        {['Everest', 'Annapurna', 'Langtang', 'Manaslu', 'Mustang', 'Pokhara', 'Kathmandu'].map(r => (
+                          <button key={r} type="button" onClick={() => {
+                            const cur = form.getValues('regions') as string[];
+                            form.setValue('regions', cur.includes(r) ? cur.filter(x => x !== r) : [...cur, r]);
+                          }} className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${((form.watch('regions') || []) as string[]).includes(r) ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>{r}</button>
+                        ))}
                       </div>
-                   </motion.div>
+                    </div>
+                  </motion.div>
                 )}
 
                 {currentStep === 4 && (
-                  <motion.div key="step4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
-                     <FormField control={form.control} name="guideType" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Professional Sector</FormLabel>
-                          <div className="flex bg-slate-100 p-1.5 rounded-2xl mt-2">
-                             {['trekking', 'tour', 'both'].map(t => (
-                               <button key={t} type="button" onClick={() => field.onChange(t)} className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${field.value === t ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}>{t}</button>
-                             ))}
-                          </div>
-                        </FormItem>
-                     )} />
-                     <div className="space-y-4">
-                        <label className="text-xs uppercase font-black text-slate-400 tracking-widest">Regions of Expertise</label>
-                        <div className="flex flex-wrap gap-2">
-                            {['Everest', 'Annapurna', 'Langtang', 'Manaslu', 'Upper Mustang', 'Pokhara'].map(r => (
-                              <button key={r} type="button" onClick={() => {
-                                const cur = form.getValues('regions') as string[];
-                                form.setValue('regions', cur.includes(r) ? cur.filter(x => x !== r) : [...cur, r]);
-                              }} className={`px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${((form.watch('regions') || []) as string[]).includes(r) ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>{r}</button>
-                            ))}
+                  <motion.div key="step4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <FormField control={form.control} name="dailyRate" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Daily Rate (NPR)</FormLabel><FormControl><Input type="number" className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <div className="flex flex-col gap-4">
+                           <FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Resource Network</FormLabel>
+                           <div className="flex items-center gap-3">
+                              <input type="checkbox" id="porter" {...form.register('hasPorterContacts')} className="w-5 h-5 rounded-lg border-slate-200 text-primary focus:ring-primary" />
+                              <label htmlFor="porter" className="text-sm font-bold text-slate-600">I have Porter contacts</label>
+                           </div>
                         </div>
                      </div>
+
+                     <FormField control={form.control} name="availabilityText" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Availability</FormLabel><FormControl><Input placeholder="Available Mon-Fri, not available Dec-Feb." className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl><FormMessage /></FormItem>
+                     )} />
+
+                     <FormField control={form.control} name="previousAgency" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Previous Travel Agency (Optional)</FormLabel><FormControl><Input className="bg-slate-50 border-none rounded-2xl py-6 px-5" {...field} /></FormControl></FormItem>
+                     )} />
+
+                     <FormField control={form.control} name="referencesText" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs uppercase font-black text-slate-400 tracking-widest">Professional References</FormLabel><FormControl><Textarea placeholder="Describe previous work references (Name, Organization, Contact)..." className="bg-slate-50 border-none rounded-3xl py-6 px-8 min-h-[120px]" {...field} /></FormControl><FormMessage /></FormItem>
+                     )} />
                   </motion.div>
                 )}
               </AnimatePresence>
 
               <div className="flex justify-between pt-12 border-t border-slate-50 mt-12">
-                <Button type="button" variant="ghost" onClick={prevStep} disabled={currentStep === 1} className="rounded-2xl px-8 font-black uppercase text-xs tracking-widest text-slate-400">Back</Button>
+                <Button type="button" variant="ghost" onClick={prevStep} disabled={currentStep === 1} className="rounded-2xl px-8 font-black uppercase text-[10px] tracking-widest text-slate-400 hover:text-slate-600">Back</Button>
                 {currentStep < 4 ? (
-                  <Button type="button" onClick={nextStep} className="bg-slate-900 text-white rounded-2xl px-12 py-7 font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all">Continue</Button>
+                  <Button type="button" onClick={() => {
+                    const stepFields: any = {
+                      1: ['fullName', 'phone', 'dob', 'citizenshipNumber'],
+                      2: ['ntbLicense', 'licenseExpiry', 'yearsExperience'],
+                      3: ['guideType', 'maxGroupSize', 'regions'],
+                    };
+                    form.trigger(stepFields[currentStep]).then(valid => {
+                      if (valid) nextStep();
+                    });
+                  }} className="bg-slate-900 text-white rounded-2xl px-12 py-7 font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20">Continue</Button>
                 ) : (
-                  <Button type="submit" disabled={isSubmitting} className="bg-[#0071e3] text-white rounded-2xl px-12 py-7 font-black uppercase text-xs tracking-widest hover:bg-[#0077ed] transition-all shadow-xl shadow-[#0071e3]/30">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Finalize Profile'}
+                  <Button type="submit" disabled={isSubmitting} className="bg-[#0071e3] text-white rounded-2xl px-12 py-7 font-black uppercase text-[10px] tracking-widest hover:bg-[#0077ed] transition-all shadow-xl shadow-[#0071e3]/30">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit for Review'}
                   </Button>
                 )}
               </div>

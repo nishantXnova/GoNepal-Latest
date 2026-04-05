@@ -22,16 +22,16 @@ const SignupSuccess = () => {
     const handleAuthRedirect = async () => {
       setIsConfirming(true);
       
-      // 1. Check Hash Params (Implicit Flow / Old Supabase)
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-
-      // 2. Check Search Params (PKCE Flow / New Supabase)
-      const code = searchParams.get('code');
-      const type = searchParams.get('type');
-
       try {
+        // 1. Check Hash Params (Implicit Flow / Old Supabase)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        // 2. Check Search Params (PKCE Flow / New Supabase)
+        const code = searchParams.get('code');
+        const type = searchParams.get('type');
+
         if (accessToken && refreshToken) {
           const { error } = await supabase.auth.setSession({ 
             access_token: accessToken, 
@@ -43,13 +43,17 @@ const SignupSuccess = () => {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
           setConfirmationStatus('success');
-        } else if (type === 'signup' || type === 'invite') {
-          // If we just landed here from a basic confirmation that already set the session
+        } else {
+          // Check if session already exists (e.g. user clicked link and is already logged in)
           const { data: { session } } = await supabase.auth.getSession();
-          if (session) setConfirmationStatus('success');
-          else setConfirmationStatus('pending');
+          if (session) {
+            setConfirmationStatus('success');
+          } else if (type === 'signup' || type === 'invite') {
+             setConfirmationStatus('pending');
+          }
         }
       } catch (err: any) {
+        console.error('Verification error:', err);
         setConfirmationStatus('error');
         toast({ variant: 'destructive', title: 'Verification failed', description: err.message });
       } finally {
@@ -64,21 +68,37 @@ const SignupSuccess = () => {
   useEffect(() => {
     if (confirmationStatus === 'success') {
       const redirect = async () => {
-        await refreshProfile();
-        // Wait a beat for profile to sync
-        setTimeout(async () => {
+        try {
+          await refreshProfile();
+          
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
-            const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-            const userRole = (profile as any)?.role?.toLowerCase() || role?.toLowerCase() || 'traveller';
+            const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+            const userRole = profile?.role?.toLowerCase() || role?.toLowerCase() || 'traveller';
             
-            if (userRole === 'guide') navigate('/guide/kyc');
-            else if (userRole === 'admin') navigate('/admin');
-            else navigate('/');
+            if (userRole === 'guide') {
+              // Check if they already have an application
+              const { data: app } = await supabase.from('guide_applications').select('status').eq('user_id', user.id).maybeSingle();
+              if (!app) navigate('/guide/kyc');
+              else if (app.status === 'pending') navigate('/guide/pending');
+              else navigate('/guide/dashboard');
+            } else if (userRole === 'admin' || user.email === 'paudelnishant15@gmail.com') {
+              navigate('/admin');
+            } else {
+              navigate('/');
+            }
+          } else {
+            navigate('/auth');
           }
-        }, 1500);
+        } catch (err) {
+          console.error('Redirect error:', err);
+          navigate('/');
+        }
       };
-      redirect();
+      
+      // Small delay to ensure session is fully propagated
+      const timer = setTimeout(redirect, 500);
+      return () => clearTimeout(timer);
     }
   }, [confirmationStatus, navigate, refreshProfile, role]);
 
