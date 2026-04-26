@@ -313,76 +313,86 @@ const Navbar = () => {
               Reviews
             </Link>
 
-            {!loading && (
-              <div className="flex flex-col gap-4 mt-2">
-                <div className="flex items-center justify-between px-2 bg-secondary/50 rounded-xl p-2">
-                  <span className="text-sm font-medium text-muted-foreground ml-2">App Language</span>
-                  <LanguageToggle isScrolled={true} />
-                </div>
-                {user ? (
-                  <>
-                    {isAdmin && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          navigate("/admin");
-                        }}
-                      >
-                        <Shield className="h-4 w-4 mr-2" />
-                        Admin Dashboard
-                      </Button>
-                    )}
-                    {isGuide && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          navigate("/guide/dashboard");
-                        }}
-                      >
-                        <Briefcase className="h-4 w-4 mr-2" />
-                        Guide Dashboard
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        navigate("/saved-places");
-                      }}
-                    >
-                      <Bookmark className="h-4 w-4 mr-2" />
-                      Saved History
-                    </Button>
-                    <Button
-                      className="btn-primary w-full"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        navigate("/profile");
-                      }}
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      My Profile
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    className="btn-primary w-full"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/auth");
-                    }}
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Sign In
-                  </Button>
-                )}
-              </div>
-            )}
+             {!loading && (
+               <div className="flex flex-col gap-4 mt-2">
+                 <div className="flex items-center justify-between px-2 bg-secondary/50 rounded-xl p-2">
+                   <span className="text-sm font-medium text-muted-foreground ml-2">App Language</span>
+                   <LanguageToggle isScrolled={true} />
+                 </div>
+                 <button
+                   onClick={() => {
+                     setIsMobileMenuOpen(false);
+                     setIsOfflineToolkitOpen(true);
+                   }}
+                   className="w-full text-left font-medium py-2 hover:text-accent transition-colors"
+                 >
+                   <Package className="h-4 w-4 mr-2" />
+                   Offline Toolkit
+                 </button>
+                 {user ? (
+                   <>
+                     {isAdmin && (
+                       <Button
+                         variant="outline"
+                         className="w-full"
+                         onClick={() => {
+                           setIsMobileMenuOpen(false);
+                           navigate("/admin");
+                         }}
+                       >
+                         <Shield className="h-4 w-4 mr-2" />
+                         Admin Dashboard
+                       </Button>
+                     )}
+                     {isGuide && (
+                       <Button
+                         variant="outline"
+                         className="w-full"
+                         onClick={() => {
+                           setIsMobileMenuOpen(false);
+                           navigate("/guide/dashboard");
+                         }}
+                       >
+                         <Briefcase className="h-4 w-4 mr-2" />
+                         Guide Dashboard
+                       </Button>
+                     )}
+                     <Button
+                       variant="outline"
+                       className="w-full"
+                       onClick={() => {
+                         setIsMobileMenuOpen(false);
+                         navigate("/saved-places");
+                       }}
+                     >
+                       <Bookmark className="h-4 w-4 mr-2" />
+                       Saved History
+                     </Button>
+                     <Button
+                       className="btn-primary w-full"
+                       onClick={() => {
+                         setIsMobileMenuOpen(false);
+                         navigate("/profile");
+                       }}
+                     >
+                       <User className="h-4 w-4 mr-2" />
+                       My Profile
+                     </Button>
+                   </>
+                 ) : (
+                   <Button
+                     className="btn-primary w-full"
+                     onClick={() => {
+                       setIsMobileMenuOpen(false);
+                       navigate("/auth");
+                     }}
+                   >
+                     <LogIn className="h-4 w-4 mr-2" />
+                     Sign In
+                   </Button>
+                 )}
+               </div>
+             )}
           </div>
         </div>
       )}
