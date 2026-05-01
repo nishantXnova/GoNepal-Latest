@@ -309,18 +309,23 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                             </a>
                                         </div>
                                         
-                                        <div className="text-xs text-slate-400 space-y-1">
-                                            <p className="flex items-center gap-1">
-                                                <Building2 className="h-3 w-3" />
-                                                <span>Hospital: </span>
-                                                <span className="text-slate-300">{nearestDistrictContact.hospital}</span>
-                                            </p>
-                                            <p className="flex items-center gap-1">
-                                                <MapPin className="h-3 w-3" />
-                                                <span>Police Station: </span>
-                                                <span className="text-slate-300">{nearestDistrictContact.policeStation}</span>
-                                            </p>
-                                        </div>
+                                         <div className="text-xs text-slate-400 space-y-1">
+                                             <p className="flex items-center gap-1">
+                                                 <Building2 className="h-3 w-3" />
+                                                 <span>Hospital: </span>
+                                                 <span className="text-slate-300">{nearestDistrictContact.hospital}</span>
+                                             </p>
+                                             <p className="flex items-center gap-1">
+                                                 <MapPin className="h-3 w-3" />
+                                                 <span>Police Station: </span>
+                                                 <span className="text-slate-300">{nearestDistrictContact.policeStation}</span>
+                                             </p>
+                                         </div>
+
+                                         {/* Version metadata */}
+                                         <p className="text-slate-500 text-xs italic mt-1">
+                                             Last verified {new Date(nearestDistrictContact.lastVerified).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} · v{nearestDistrictContact.dataVersion}
+                                         </p>
                                         
                                         {nearestDistrictContact.helicopter && (
                                             <div className="mt-2 pt-2 border-t border-purple-800/30">
@@ -785,25 +790,29 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                                        <a 
-                                                            href={`tel:${region.police}`}
-                                                            className="flex items-center gap-1 text-blue-300 hover:text-blue-200"
-                                                        >
-                                                            <PhoneCall className="h-3 w-3" />
-                                                            Police: {region.police}
-                                                        </a>
-                                                        <a 
-                                                            href={`tel:${region.ambulance}`}
-                                                            className="flex items-center gap-1 text-green-300 hover:text-green-200"
-                                                        >
-                                                            <PhoneCall className="h-3 w-3" />
-                                                            Ambulance: {region.ambulance}
-                                                        </a>
-                                                        <span className="text-slate-500 col-span-2">
-                                                            Hospital: {region.hospital}
-                                                        </span>
-                                                    </div>
+                                                     <div className="grid grid-cols-2 gap-2 text-xs">
+                                                         <a 
+                                                             href={`tel:${region.police}`}
+                                                             className="flex items-center gap-1 text-blue-300 hover:text-blue-200"
+                                                         >
+                                                             <PhoneCall className="h-3 w-3" />
+                                                             Police: {region.police}
+                                                         </a>
+                                                         <a 
+                                                             href={`tel:${region.ambulance}`}
+                                                             className="flex items-center gap-1 text-green-300 hover:text-green-200"
+                                                         >
+                                                             <PhoneCall className="h-3 w-3" />
+                                                             Ambulance: {region.ambulance}
+                                                         </a>
+                                                         <span className="text-slate-500 col-span-2">
+                                                             Hospital: {region.hospital}
+                                                         </span>
+                                                     </div>
+                                                     {/* Version metadata */}
+                                                     <p className="text-slate-500 text-xs italic mt-1">
+                                                         Last verified {new Date(region.lastVerified).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} · v{region.dataVersion}
+                                                     </p>
                                                 </div>
                                             ))}
                                         </div>

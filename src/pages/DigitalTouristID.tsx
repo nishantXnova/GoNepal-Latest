@@ -6,7 +6,8 @@ import {
     QrCode, Shield, CheckCircle2, Download, Share2,
     Globe, Calendar, CreditCard, User, Flag, Fingerprint,
     Phone, AlertTriangle, Wifi, WifiOff, Copy, ChevronLeft,
-    Loader2, Scan, IdCard, Sparkles, Verified, X, Briefcase, Map, Languages, Plus, Sun
+    Loader2, Scan, IdCard, Sparkles, Verified, X, Briefcase, Map, Languages, Plus, Sun,
+    Lock, KeyRound
 } from "lucide-react";
 import { cacheTrip, getCachedTrip, isOffline, CachedTripData } from "@/lib/offlineService";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
 import { getSafeErrorMessage } from "@/utils/errorUtils";
 import { Link } from "react-router-dom";
+import { encryptData, decryptData, isEncrypted, type EncryptedData } from "@/lib/crypto";
 
 // ── Tourist Data Schema ──────────────────────────────────────────────────────
 interface TouristData {
@@ -195,6 +197,136 @@ function EditProfileModal({ data, onSave, onClose }: { data: TouristData; onSave
     );
 }
 
+// ── PIN Modal (Create or Verify) ───────────────────────────────────────────────
+type PinModalMode = 'create' | 'verify' | 'migrate';
+
+function PinModal({
+  mode,
+  onConfirm,
+  onCancel
+}: {
+  mode: PinModalMode;
+  onConfirm: (pin: string) => void;
+  onCancel: () => void;
+}) {
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    setError('');
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      setError('PIN must be 4-6 digits');
+      return;
+    }
+
+    if (mode === 'create' || mode === 'migrate') {
+      if (pin !== confirmPin) {
+        setError('PINs do not match');
+        return;
+      }
+    }
+
+    onConfirm(pin);
+  };
+
+  const getTitle = () => {
+    if (mode === 'migrate') return 'Secure Your Digital ID';
+    if (mode === 'create') return 'Create Security PIN';
+    return 'Enter PIN to View';
+  };
+
+  const getDescription = () => {
+    if (mode === 'migrate') return 'Your existing ID is unencrypted. Create a PIN to secure it. Forgetting your PIN means losing access — there is no recovery.';
+    if (mode === 'create') return 'Choose a 4–6 digit PIN. This will be required every time you open your Digital ID.';
+    return 'Enter your PIN to view your Digital Tourist ID.';
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden"
+      >
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mx-auto mb-2">
+            <Lock className="w-8 h-8 text-red-400" />
+          </div>
+
+          <div className="text-center">
+            <h2 className="text-lg font-bold text-white">{getTitle()}</h2>
+            <p className="text-sm text-slate-400 mt-1">{getDescription()}</p>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-900/30 border border-red-800/50 rounded-lg text-red-300 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={pin}
+              onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder={mode === 'create' || mode === 'migrate' ? 'Create PIN (4–6 digits)' : 'Enter PIN'}
+              className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-4 text-center text-2xl tracking-widest text-white placeholder-slate-500 focus:ring-2 focus:ring-red-500 outline-none"
+              autoFocus
+            />
+            {(mode === 'create' || mode === 'migrate') && (
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={confirmPin}
+                onChange={e => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Confirm PIN"
+                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-4 text-center text-2xl tracking-widest text-white placeholder-slate-500 focus:ring-2 focus:ring-red-500 outline-none"
+              />
+            )}
+          </div>
+
+          <p className="text-xs text-slate-500 text-center">
+            <strong className="text-slate-300">⚠️ Forgetting your PIN makes your ID irrecoverable.</strong> Do not proceed unless you can remember it.
+          </p>
+
+          <div className="flex gap-3">
+            {mode !== 'migrate' && (
+              <Button
+                variant="ghost"
+                onClick={onCancel}
+                className="flex-1 text-slate-300 hover:text-white hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              onClick={handleSubmit}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-5 font-bold"
+            >
+              {mode === 'migrate' ? 'Secure ID' : mode === 'create' ? 'Create PIN' : 'Unlock'}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const DigitalTouristID = () => {
     const [showCheckin, setShowCheckin] = useState(false);
@@ -203,8 +335,15 @@ const DigitalTouristID = () => {
     const [touristData, setTouristData] = useState<TouristData>(DEFAULT_TOURIST_DATA);
     const [cachedTrip, setCachedTrip] = useState<CachedTripData | null>(null);
     const [isCaching, setIsCaching] = useState(false);
-    const [localQRCode, setLocalQRCode] = useState<string>('');
-    const { toast } = useToast();
+  const [localQRCode, setLocalQRCode] = useState<string>('');
+  const [isPINProtected, setIsPINProtected] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinMode, setPinMode] = useState<PinModalMode>('verify');
+  const { toast } = useToast();
+
+  // Session-level PIN cache: derivedKey | null (in memory only)
+  const derivedKeyRef = useRef<CryptoKey | null>(null);
+  const currentSaltRef = useRef<string | null>(null); // preserve salt for re-encryption
 
     // Generate QR code locally (works offline!)
     useEffect(() => {
@@ -224,27 +363,129 @@ const DigitalTouristID = () => {
         setCachedTrip(getCachedTrip());
     }, []);
 
-    // Load from localStorage on mount
+    // ── Load & Decrypt Data on Mount ───────────────────────────────────────────
     useEffect(() => {
-        const saved = localStorage.getItem("tourist_id_data");
-        if (saved) {
-            try {
-                setTouristData(JSON.parse(saved));
-            } catch (e) {
-                logger.error("Failed to parse saved tourist data", e);
-            }
+      const loadData = async () => {
+        const raw = localStorage.getItem("tourist_id_data");
+        if (!raw) return; // No data saved yet
+
+        try {
+          const parsed = JSON.parse(raw);
+
+          // Check if already encrypted
+          if (isEncrypted(parsed)) {
+            // Encrypted — require PIN to decrypt
+            setIsPINProtected(true);
+            setPinMode('verify');
+            setShowPinModal(true);
+          } else {
+            // Unencrypted — MIGRATION REQUIRED
+            setIsPINProtected(false);
+            setTouristData(parsed);
+            // Force migration modal (cannot dismiss)
+            setPinMode('migrate');
+            setShowPinModal(true);
+          }
+        } catch (e) {
+          logger.error("Failed to parse saved tourist data", e);
         }
+      };
+      loadData();
     }, []);
 
-    const handleSave = (newData: TouristData) => {
-        setTouristData(newData);
-        localStorage.setItem("tourist_id_data", JSON.stringify(newData));
-        setShowEdit(false);
-        setQrLoaded(false); // Trigger QR reload
+    // ── Handle PIN Actions (decrypt / create / migrate) ────────────────────────
+    const handlePinSubmit = async (pin: string) => {
+      try {
+        if (pinMode === 'verify') {
+          // Decrypt existing encrypted data
+          const raw = localStorage.getItem("tourist_id_data");
+          if (!raw) throw new Error('No data found');
+          const encrypted: EncryptedData = JSON.parse(raw);
+          const decrypted = await decryptData(pin, encrypted);
+          setTouristData(decrypted);
+          // Cache derived key for this session (for re-encrypt on save)
+          const saltBytes = Uint8Array.from(atob(encrypted.salt), c => c.charCodeAt(0));
+          const baseKey = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(pin), { name: 'PBKDF2' }, false, ['deriveKey']);
+          derivedKeyRef.current = await window.crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt: saltBytes, iterations: 100000, hash: 'SHA-256' },
+            baseKey,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+          );
+          currentSaltRef.current = encrypted.salt;
+          setIsPINProtected(true);
+          setShowPinModal(false);
+          toast({ title: "🔓 Unlocked", description: "Your Digital ID is now visible." });
+        } else if (pinMode === 'create' || pinMode === 'migrate') {
+          // Encrypt current touristData and save
+          const encrypted = await encryptData(pin, touristData);
+          localStorage.setItem("tourist_id_data", JSON.stringify(encrypted));
+          // Cache derived key & salt for this session (for future re-encryption)
+          const saltBytes = Uint8Array.from(atob(encrypted.salt), c => c.charCodeAt(0));
+          const baseKey = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(pin), { name: 'PBKDF2' }, false, ['deriveKey']);
+          const derivedKey = await window.crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt: saltBytes, iterations: 100000, hash: 'SHA-256' },
+            baseKey,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+          );
+          derivedKeyRef.current = derivedKey;
+          currentSaltRef.current = encrypted.salt;
+          setIsPINProtected(true);
+          setShowPinModal(false);
+          toast({
+            title: pinMode === 'migrate' ? "✅ ID Secured" : "🔐 PIN Created",
+            description: pinMode === 'migrate'
+              ? "Your Digital ID is now encrypted and protected."
+              : "Your PIN will be required to view this ID in the future."
+          });
+        }
+      } catch (err: any) {
         toast({
-            title: "✅ Profile Updated",
-            description: "Your Digital Tourist ID has been successfully updated.",
+          variant: "destructive",
+          title: pinMode === 'verify' ? "🔓 Wrong PIN" : "Error",
+          description: err.message || "Failed to process PIN",
         });
+      }
+    };
+
+    const handleSave = async (newData: TouristData) => {
+      // If not yet encrypted (first-time user or migration not done), open PIN creation modal first
+      if (!isPINProtected) {
+        setTouristData(newData); // temporarily store new data
+        setPinMode('create');
+        setShowPinModal(true);
+        return;
+      }
+
+      // Already have PIN — re-encrypt and save
+      try {
+        if (!derivedKeyRef.current) throw new Error('Session key missing');
+
+        const encrypted = await encryptWithKey(
+          derivedKeyRef.current,
+          newData,
+          currentSaltRef.current || undefined
+        );
+        localStorage.setItem("tourist_id_data", JSON.stringify(encrypted));
+
+        setTouristData(newData);
+        setShowEdit(false);
+        setQrLoaded(false);
+        toast({
+          title: "✅ Profile Updated",
+          description: "Your Digital Tourist ID has been successfully updated and re-encrypted.",
+        });
+      } catch (err) {
+        logger.error("Encryption/save error:", err);
+        toast({
+          variant: "destructive",
+          title: "Save Failed",
+          description: getSafeErrorMessage("Failed to encrypt and save your ID."),
+        });
+      }
     };
 
     const maskedPassport = touristData.passportNumber.slice(0, -4).replace(/./g, "*") + touristData.passportNumber.slice(-4);
@@ -448,6 +689,24 @@ const DigitalTouristID = () => {
             {/* Edit Profile Modal */}
             <AnimatePresence>
                 {showEdit && <EditProfileModal data={touristData} onSave={handleSave} onClose={() => setShowEdit(false)} />}
+            </AnimatePresence>
+
+            {/* PIN Modal (Create / Verify / Migrate) */}
+            <AnimatePresence>
+                {showPinModal && (
+                    <PinModal
+                        mode={pinMode}
+                        onConfirm={handlePinSubmit}
+                        onCancel={() => {
+                            if (pinMode === 'verify') {
+                                setShowPinModal(false);
+                                setTouristData(DEFAULT_TOURIST_DATA); // fallback
+                            } else {
+                                setShowPinModal(false);
+                            }
+                        }}
+                    />
+                )}
             </AnimatePresence>
 
             <div className="pt-28 pb-12 px-4">

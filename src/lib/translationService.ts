@@ -14,7 +14,8 @@ import {
     TranslationEntry, 
     clearTranslationVault, 
     isOnline,
-    getVaultSize 
+    getVaultSize,
+    saveTranslation  // new function with cleanup built-in
 } from "./translationVault";
 import { logger } from "@/utils/logger";
 
@@ -55,14 +56,7 @@ const saveToVault = async (
     if (savedToVault.has(cacheKey)) return;
     
     try {
-        await translationVault.translations.add({
-            cacheKey,
-            originalText,
-            translatedText,
-            fromLang,
-            toLang,
-            timestamp: Date.now()
-        });
+        await saveTranslation(cacheKey, originalText, translatedText, fromLang, toLang);
         savedToVault.add(cacheKey);
         logger.log(`[TranslationVault] Saved: ${originalText.substring(0, 30)}... -> ${translatedText.substring(0, 30)}...`);
     } catch (error) {

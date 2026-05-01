@@ -1,3 +1,17 @@
+// ============================================================================
+// NOT INTEGRATED — SCHEMA REFERENCE ONLY
+// ============================================================================
+// This file defines the GonepalOfflineDB schema for Phase 3 (offline maps).
+// It is NOT imported by any active route and the database is never instantiated.
+// Do NOT use this for current storage needs — use the dedicated caches below:
+//   - GonepalTranslationVault (translationVault.ts)
+//   - GonepalNewsCache (newsCache.ts)
+//   - GonepalCurrencyCache (currencyCache.ts)
+// Preserved as a reference for PMTiles + pinned locations schema design.
+//
+// Author: Nishant (original), kept for Phase 3 reference
+// ============================================================================
+
 import Dexie, { Table } from 'dexie';
 import { logger } from '@/utils/logger';
 
