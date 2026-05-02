@@ -7,9 +7,11 @@ import {
     Globe, Calendar, CreditCard, User, Flag, Fingerprint,
     Phone, AlertTriangle, Wifi, WifiOff, Copy, ChevronLeft,
     Loader2, Scan, IdCard, Sparkles, Verified, X, Briefcase, Map, Languages, Plus, Sun,
-    Lock, KeyRound
+    Lock, KeyRound, Search, MapPin, Trash2, Loader
 } from "lucide-react";
 import { cacheTrip, getCachedTrip, isOffline, CachedTripData } from "@/lib/offlineService";
+import { searchLocations, downloadMapRegion, getDownloadedMapRegions, deleteMapRegion } from "@/lib/offlineMapService";
+import type { MapRegion, SearchResult, BoundingBox } from "@/lib/offlineMapService";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +19,7 @@ import { logger } from "@/utils/logger";
 import { getSafeErrorMessage } from "@/utils/errorUtils";
 import { Link } from "react-router-dom";
 import { encryptData, decryptData, isEncrypted, type EncryptedData } from "@/lib/crypto";
+import OfflineMapViewer from "@/components/OfflineMapViewer";
 
 // ── Tourist Data Schema ──────────────────────────────────────────────────────
 interface TouristData {
@@ -335,11 +338,21 @@ const DigitalTouristID = () => {
     const [touristData, setTouristData] = useState<TouristData>(DEFAULT_TOURIST_DATA);
     const [cachedTrip, setCachedTrip] = useState<CachedTripData | null>(null);
     const [isCaching, setIsCaching] = useState(false);
-  const [localQRCode, setLocalQRCode] = useState<string>('');
-  const [isPINProtected, setIsPINProtected] = useState(false);
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pinMode, setPinMode] = useState<PinModalMode>('verify');
-  const { toast } = useToast();
+    const [localQRCode, setLocalQRCode] = useState<string>('');
+    const [isPINProtected, setIsPINProtected] = useState(false);
+    const [showPinModal, setShowPinModal] = useState(false);
+    const [pinMode, setPinMode] = useState<PinModalMode>('verify');
+    const { toast } = useToast();
+
+    // Offline maps state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const [selectedLocation, setSelectedLocation] = useState<SearchResult | null>(null);
+    const [downloading, setDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState<{ percent: number; downloaded: number; total: number } | null>(null);
+    const [offlineRegions, setOfflineRegions] = useState<MapRegion[]>([]);
+    const [showMapViewer, setShowMapViewer] = useState(false);
+    const [viewingRegion, setViewingRegion] = useState<MapRegion | null>(null);
 
   // Session-level PIN cache: derivedKey | null (in memory only)
   const derivedKeyRef = useRef<CryptoKey | null>(null);
@@ -362,6 +375,28 @@ const DigitalTouristID = () => {
     useEffect(() => {
         setCachedTrip(getCachedTrip());
     }, []);
+
+    // Load offline map regions on mount
+    useEffect(() => {
+        const loadRegions = async () => {
+            const regions = await getDownloadedMapRegions();
+            setOfflineRegions(regions);
+        };
+        loadRegions();
+    }, []);
+
+    // Debounced location search
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (searchQuery.length >= 3) {
+                const results = await searchLocations(searchQuery);
+                setSearchResults(results);
+            } else {
+                setSearchResults([]);
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     // ── Load & Decrypt Data on Mount ───────────────────────────────────────────
     useEffect(() => {
@@ -660,6 +695,86 @@ const DigitalTouristID = () => {
         } finally {
             setIsCaching(false);
         }
+    };
+
+    // ── Offline Maps Handlers ───────────────────────────────────────────────────
+    const handleSelectLocation = (result: SearchResult) => {
+        setSelectedLocation(result);
+        setSearchResults([]);
+        setSearchQuery(result.display_name);
+    };
+
+    const handleDownloadRegion = async () => {
+        if (!selectedLocation) return;
+
+        let bounds: BoundingBox;
+
+        const bbox = selectedLocation.boundingbox;
+        if (bbox && bbox.length === 4) {
+            // Nominatim bbox: [south, north, west, east]
+            bounds = {
+                north: parseFloat(bbox[1]),
+                south: parseFloat(bbox[0]),
+                east: parseFloat(bbox[3]),
+                west: parseFloat(bbox[2]),
+            };
+        } else {
+            // Fallback: small area around point (~2km)
+            const delta = 0.02;
+            bounds = {
+                north: selectedLocation.lat + delta,
+                south: selectedLocation.lat - delta,
+                east: selectedLocation.lon + delta,
+                west: selectedLocation.lon - delta,
+            };
+        }
+
+        const regionName = selectedLocation.display_name.split(',')[0];
+        setDownloading(true);
+        setDownloadProgress({ percent: 0, downloaded: 0, total: 0 });
+
+        try {
+            const { regionId, tileCount } = await downloadMapRegion(regionName, bounds, [10, 11, 12, 13, 14], (progress) => {
+                setDownloadProgress(progress);
+            });
+
+            const regions = await getDownloadedMapRegions();
+            setOfflineRegions(regions);
+
+            setSelectedLocation(null);
+            setSearchQuery('');
+
+            toast({
+                title: "🗺️ Region Downloaded",
+                description: `${tileCount} tiles cached for "${regionName}". Available offline.`,
+            });
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Download failed",
+                description: getSafeErrorMessage("Could not download map area. Please try again."),
+            });
+        } finally {
+            setDownloading(false);
+            setDownloadProgress(null);
+        }
+    };
+
+    const handleDeleteRegion = async (id: number) => {
+        if (!window.confirm("Delete this offline map area? Cached tiles may remain until cleanup.")) return;
+        const success = await deleteMapRegion(id);
+        if (success) {
+            const regions = await getDownloadedMapRegions();
+            setOfflineRegions(regions);
+            toast({ title: "🗑️ Region deleted" });
+        } else {
+            toast({ variant: "destructive", title: "Delete failed" });
+        }
+    };
+
+    const handleViewMap = (region: MapRegion) => {
+        setViewingRegion(region);
+        setShowMapViewer(true);
     };
 
     return (
@@ -1002,6 +1117,121 @@ const DigitalTouristID = () => {
                                     </Button>
                                 </div>
                             )}
+
+                            {/* ── Offline Maps ── */}
+                            <div className="space-y-3 pt-2">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <Map className="w-4 h-4" />
+                                    <p className="text-xs font-bold uppercase tracking-wider">Offline Maps</p>
+                                </div>
+
+                                {/* Region list */}
+                                {offlineRegions.length > 0 && (
+                                    <div className="space-y-2">
+                                        {offlineRegions.map(region => (
+                                            <div key={region.id} className="bg-amber-50 rounded-xl p-3 border border-amber-100 flex items-start justify-between">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-amber-900 truncate">{region.name}</p>
+                                                    <p className="text-[10px] text-amber-700">
+                                                        {region.tileCount} tiles · z{region.minZoom}-{region.maxZoom}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => handleViewMap(region)}
+                                                        className="p-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 transition-colors"
+                                                        title="View map"
+                                                    >
+                                                        <Map className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => region.id && handleDeleteRegion(region.id)}
+                                                        className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 transition-colors"
+                                                        title="Delete region"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Search & download */}
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search trail, city, landmark..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                                        />
+                                    </div>
+
+                                    {searchResults.length > 0 && (
+                                        <div className="bg-white rounded-xl border border-gray-200 shadow-lg max-h-40 overflow-y-auto z-10 relative">
+                                            {searchResults.map((result, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleSelectLocation(result)}
+                                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b last:border-0 border-gray-100 text-xs"
+                                                >
+                                                    <div className="font-bold text-gray-800 truncate">{result.display_name}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {selectedLocation && (
+                                        <div className="bg-blue-50 rounded-xl p-3 border border-blue-200">
+                                            <div className="flex items-start gap-2">
+                                                <MapPin className="w-4 h-4 text-blue-600 mt-0.5" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold text-blue-900 truncate">{selectedLocation.display_name}</p>
+                                                    <p className="text-[10px] text-blue-700">
+                                                        {selectedLocation.boundingbox ? `${parseFloat(selectedLocation.boundingbox[0]).toFixed(3)}°S, ${parseFloat(selectedLocation.boundingbox[2]).toFixed(3)}°E` : ''}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setSelectedLocation(null)}
+                                                    className="p-1 rounded hover:bg-blue-100"
+                                                >
+                                                    <X className="w-3 h-3 text-blue-600" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        onClick={handleDownloadRegion}
+                                        disabled={!selectedLocation || downloading}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-5 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {downloading ? (
+                                            <>
+                                                <Loader className="w-4 h-4 animate-spin mr-2" />
+                                                Downloading {downloadProgress?.percent ?? 0}%
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Download className="w-4 h-4 mr-2" />
+                                                Download Area for Offline
+                                            </>
+                                        )}
+                                    </Button>
+
+                                    {downloading && downloadProgress && (
+                                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                            <div
+                                                className="bg-emerald-500 h-full transition-all duration-300"
+                                                style={{ width: `${downloadProgress.percent}%` }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
 
@@ -1010,6 +1240,20 @@ const DigitalTouristID = () => {
                         🔒 This is a simulated Digital Tourist ID for demonstration purposes only.<br />
                         Not a legal document. FNMIS integration is mocked.
                     </p>
+
+                    {/* Offline Map Viewer Modal */}
+                    {showMapViewer && viewingRegion && (
+                        <OfflineMapViewer
+                            regionId={viewingRegion.id}
+                            bounds={[
+                                viewingRegion.west,
+                                viewingRegion.south,
+                                viewingRegion.east,
+                                viewingRegion.north
+                            ]}
+                            onClose={() => setShowMapViewer(false)}
+                        />
+                    )}
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogIn, Shield, Bookmark, Newspaper, BadgeCheck, ChevronDown, Package, Star, Briefcase } from "lucide-react";
+import { Menu, X, User, LogIn, Shield, Bookmark, Newspaper, BadgeCheck, ChevronDown, Package, Star, Briefcase, LifeBuoy, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import LanguageToggle from "./LanguageToggle";
@@ -143,7 +143,6 @@ const Navbar = () => {
             Reviews
           </Link>
 
-          {/* Travel Tools Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={`flex items-center gap-1 font-medium tracking-wide transition-all duration-300 hover:text-accent outline-none ${isScrolled ? "text-foreground" : "text-white/90"}`}>
               Travel Tools <ChevronDown className="w-3 h-3 opacity-50" />
@@ -165,7 +164,18 @@ const Navbar = () => {
               <DropdownMenuItem onClick={() => handleNavClick("/#translator")} className="cursor-pointer py-2 px-3 rounded-lg hover:bg-accent/10 focus:bg-accent/10">
                 Translator
               </DropdownMenuItem>
-            </DropdownMenuContent>
+              <DropdownMenuItem asChild>
+                <Link to="/help" className="cursor-pointer py-2 px-3 rounded-lg hover:bg-accent/10 focus:bg-accent/10 flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
+                  <LifeBuoy className="w-4 h-4" />
+                  Help Center
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/developers" className="cursor-pointer py-2 px-3 rounded-lg hover:bg-accent/10 focus:bg-accent/10 flex items-center gap-2 border-t border-white/10 mt-1 pt-2" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Code className="w-4 h-4" />
+                  Developers
+                </Link>
+              </DropdownMenuItem>
           </DropdownMenu>
 
           {/* Auth/Profile Section */}
@@ -313,6 +323,24 @@ const Navbar = () => {
               Reviews
             </Link>
 
+            <Link
+              to="/help"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-foreground font-medium py-2 hover:text-accent transition-colors flex items-center gap-2"
+            >
+              <LifeBuoy className="w-4 h-4" />
+              Help Center
+            </Link>
+
+            <Link
+              to="/developers"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-foreground font-medium py-2 hover:text-accent transition-colors flex items-center gap-2"
+            >
+              <Code className="w-4 h-4" />
+              Developers
+            </Link>
+
              {!loading && (
                <div className="flex flex-col gap-4 mt-2">
                  <div className="flex items-center justify-between px-2 bg-secondary/50 rounded-xl p-2">
@@ -401,3 +429,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+

@@ -22,6 +22,7 @@ import {
     DistrictEmergencyContact
 } from "@/lib/emergencyContacts";
 import { getSecureLocation, isGeolocationSupported, getLocationPermissionStatus } from "@/lib/locationService";
+import { getHomeBaseLocation } from "@/lib/offlineDatabase";
 import { 
     HACE_DATA, 
     HAPE_DATA, 
@@ -62,40 +63,57 @@ const OfflineToolkit: React.FC<OfflineToolkitProps> = ({ isOpen, onClose }) => {
     // Get trekking regions for emergency contacts
     const trekkingRegions = getTrekkingRegions();
 
-    // Function to detect GPS and find nearest emergency contacts
-    const detectMyLocation = async () => {
-        setIsDetectingLocation(true);
-        setLocationError(null);
-        
+// Function to detect GPS and find nearest emergency contacts
+  const detectMyLocation = async () => {
+    setIsDetectingLocation(true);
+    setLocationError(null);
+    
+    try {
+      // Check if geolocation is supported
+      if (!isGeolocationSupported()) {
+        setLocationError("Geolocation is not supported on this device");
+        return;
+      }
+      
+      // Check permission status
+      const permissionStatus = await getLocationPermissionStatus();
+      if (permissionStatus.status === 'denied') {
+        setLocationError("Location permission denied. Please enable in browser settings.");
+        return;
+      }
+      
+      // Get secure location
+      const location = await getSecureLocation();
+      
+      setUserLocation({ lat: location.lat, lng: location.lng });
+      
+      // Find nearest district based on GPS
+      const nearestContact = findNearestDistrict(location.lat, location.lng);
+      setNearestDistrictContact(nearestContact);
+      
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Failed to get location";
+      setLocationError(errorMsg);
+      
+      // If it's a timeout, suggest trying again or using manual coordinates
+      if (errorMsg.includes('timed out') || errorMsg.includes('unavailable')) {
+        // Try a fallback: use last known location from pinned locations
         try {
-            // Check if geolocation is supported
-            if (!isGeolocationSupported()) {
-                setLocationError("Geolocation is not supported on this device");
-                return;
-            }
-            
-            // Check permission status
-            const permissionStatus = await getLocationPermissionStatus();
-            if (permissionStatus.status === 'denied') {
-                setLocationError("Location permission denied. Please enable in browser settings.");
-                return;
-            }
-            
-            // Get secure location
-            const location = await getSecureLocation();
-            
-            setUserLocation({ lat: location.lat, lng: location.lng });
-            
-            // Find nearest district based on GPS
-            const nearestContact = findNearestDistrict(location.lat, location.lng);
+          const homeBase = await getHomeBaseLocation();
+          if (homeBase) {
+            setUserLocation({ lat: homeBase.latitude, lng: homeBase.longitude });
+            const nearestContact = findNearestDistrict(homeBase.latitude, homeBase.longitude);
             setNearestDistrictContact(nearestContact);
-            
-        } catch (error) {
-            setLocationError(error instanceof Error ? error.message : "Failed to get location");
-        } finally {
-            setIsDetectingLocation(false);
+            setLocationError(null);
+          }
+        } catch (e) {
+          // If fallback also fails, keep the original error
         }
-    };
+      }
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  };
 
     // Load cached data and monitor online/offline status
     useEffect(() => {

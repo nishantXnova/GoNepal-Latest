@@ -38,7 +38,7 @@ export interface GeocodingResult {
 
 const LOCATION_CONFIG = {
   enableHighAccuracy: true,
-  timeout: 15000, // 15 seconds
+  timeout: 30000, // 30 seconds - increased for better offline detection
   maximumAge: 300000, // 5 minutes cache
   // Minimum accuracy threshold (meters) - higher = more precise
   accuracyThreshold: 100,
