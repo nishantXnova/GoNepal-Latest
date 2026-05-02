@@ -174,7 +174,7 @@ const NearbyPlaces = () => {
     };
 
 
-     const fetchNearbyPlaces = async (lat: number, lon: number, category?: string) => {
+    const fetchNearbyPlaces = async (lat: number, lon: number, category?: string) => {
          if (!showNearby) return;
          setLoading(true);
          setError(null);
@@ -194,7 +194,7 @@ const NearbyPlaces = () => {
              }
 
              const overpassQuery = `
-         [out:json];
+         [out:json][timeout:25];
          (
            ${queries}
          );
@@ -206,20 +206,51 @@ const NearbyPlaces = () => {
                  setTimeout(() => reject(new Error("Request timeout after 30 seconds")), 30000);
              });
 
-             const fetchPromise = fetch("https://overpass-api.de/api/interpreter", {
-                 method: "POST",
-                 body: overpassQuery,
-                 headers: {
-                     "Content-Type": "application/x-www-form-urlencoded",
-                     "User-Agent": "GoNepal-Tourist-App/1.0 (https://gonpal-tourism.com.np)",
-                     "Accept": "application/json",
-                 },
-             });
+             // Try multiple Overpass API endpoints for reliability
+             const endpoints = [
+                 "https://overpass.kumi.systems/api/interpreter", // Primary: kumi kubernetes cluster (more reliable)
+                 "https://overpass-api.de/api/interpreter",      // Fallback: original endpoint
+             ];
 
-             const response = await Promise.race([fetchPromise, timeoutPromise]);
-             
-             if (!response.ok) {
-                 throw new Error(`Failed to fetch places (Status: ${response.status})`);
+             let lastError: Error | null = null;
+             let response: Response | null = null;
+
+             for (const endpoint of endpoints) {
+                 try {
+                     logger.info(`Trying Overpass API endpoint: ${endpoint}`);
+                     
+                     const fetchPromise = fetch(endpoint, {
+                         method: "POST",
+                         body: overpassQuery,
+                         headers: {
+                             "Content-Type": "application/x-www-form-urlencoded",
+                             "User-Agent": "GoNepal-Tourist-App/1.0",
+                             "Accept": "application/json",
+                         },
+                         mode: "cors",
+                     });
+
+                     response = await Promise.race([fetchPromise, timeoutPromise]);
+                     
+                     if (response.ok) {
+                         logger.info(`Successfully fetched from: ${endpoint}`);
+                         break; // Success, exit retry loop
+                     } else {
+                         lastError = new Error(`Failed to fetch places (Status: ${response.status}) from ${endpoint}`);
+                         logger.warn(`Endpoint ${endpoint} returned status ${response.status}, trying next...`);
+                         response = null;
+                         continue; // Try next endpoint
+                     }
+                 } catch (err) {
+                     lastError = err instanceof Error ? err : new Error("Unknown error occurred");
+                     logger.warn(`Endpoint ${endpoint} failed:`, lastError.message, "trying next...");
+                     response = null;
+                     continue; // Try next endpoint
+                 }
+             }
+
+             if (!response) {
+                 throw lastError || new Error("All Overpass API endpoints failed");
              }
 
              const data = await response.json();
@@ -246,7 +277,7 @@ const NearbyPlaces = () => {
          } catch (err) {
              const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
              logger.error("Nearby places fetch error:", errorMessage);
-             setError(`Error fetching nearby places. ${errorMessage}. Please try again later.`);
+             setError(`Unable to fetch nearby places. ${errorMessage}. Please try again later.`);
          } finally {
              setLoading(false);
          }
