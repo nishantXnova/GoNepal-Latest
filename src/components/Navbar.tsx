@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User, LogIn, Shield, Bookmark, Newspaper, BadgeCheck, ChevronDown, Package, Star, Briefcase, LifeBuoy, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -176,6 +176,7 @@ const Navbar = () => {
                   Developers
                 </Link>
               </DropdownMenuItem>
+            </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Auth/Profile Section */}
