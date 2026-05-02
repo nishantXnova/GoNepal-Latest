@@ -174,67 +174,83 @@ const NearbyPlaces = () => {
     };
 
 
-    const fetchNearbyPlaces = async (lat: number, lon: number, category?: string) => {
-        if (!showNearby) return;
-        setLoading(true);
-        setError(null);
-        try {
-            const radius = 3000;
+     const fetchNearbyPlaces = async (lat: number, lon: number, category?: string) => {
+         if (!showNearby) return;
+         setLoading(true);
+         setError(null);
+         try {
+             const radius = 3000;
 
-            // If a specific category is selected, only fetch that category
-            // Otherwise, fetch all categories
-            let queries: string;
-            if (category && CATEGORIES[category as keyof typeof CATEGORIES]) {
-                queries = `${CATEGORIES[category as keyof typeof CATEGORIES].query}(around:${radius},${lat},${lon});`;
-            } else {
-                // Fetch all categories
-                queries = Object.entries(CATEGORIES)
-                    .map(([key, cat]) => `${cat.query}(around:${radius},${lat},${lon});`)
-                    .join("");
-            }
+             // If a specific category is selected, only fetch that category
+             // Otherwise, fetch all categories
+             let queries: string;
+             if (category && CATEGORIES[category as keyof typeof CATEGORIES]) {
+                 queries = `${CATEGORIES[category as keyof typeof CATEGORIES].query}(around:${radius},${lat},${lon});`;
+             } else {
+                 // Fetch all categories
+                 queries = Object.entries(CATEGORIES)
+                     .map(([key, cat]) => `${cat.query}(around:${radius},${lat},${lon});`)
+                     .join("");
+             }
 
-            const overpassQuery = `
-        [out:json];
-        (
-          ${queries}
-        );
-        out body;
-      `;
+             const overpassQuery = `
+         [out:json];
+         (
+           ${queries}
+         );
+         out body;
+       `;
 
-            const response = await fetch("https://overpass-api.de/api/interpreter", {
-                method: "POST",
-                body: overpassQuery,
-            });
+             // Create a timeout promise
+             const timeoutPromise = new Promise<Response>((_, reject) => {
+                 setTimeout(() => reject(new Error("Request timeout after 30 seconds")), 30000);
+             });
 
-            if (!response.ok) throw new Error("Failed to fetch places");
+             const fetchPromise = fetch("https://overpass-api.de/api/interpreter", {
+                 method: "POST",
+                 body: overpassQuery,
+                 headers: {
+                     "Content-Type": "application/x-www-form-urlencoded",
+                     "User-Agent": "GoNepal-Tourist-App/1.0 (https://gonpal-tourism.com.np)",
+                     "Accept": "application/json",
+                 },
+             });
 
-            const data = await response.json();
-            const formattedPlaces: Place[] = data.elements
-                .filter((el: any) => el.lat && el.lon)
-                .map((el: any) => {
-                    let category: Place["category"] = "restaurant";
-                    if (el.tags.amenity === "hospital") category = "hospital";
-                    else if (el.tags.tourism) category = "hotel";
-                    else if (el.tags.leisure === "park") category = "park";
-                    else if (el.tags.shop === "mall") category = "mall";
+             const response = await Promise.race([fetchPromise, timeoutPromise]);
+             
+             if (!response.ok) {
+                 throw new Error(`Failed to fetch places (Status: ${response.status})`);
+             }
 
-                    return {
-                        id: el.id,
-                        lat: el.lat,
-                        lon: el.lon,
-                        name: el.tags.name || el.tags.operator || "Unnamed Place",
-                        type: el.tags.amenity || el.tags.tourism || el.tags.leisure || el.tags.shop || "Place",
-                        category,
-                    };
-                });
+             const data = await response.json();
+             const formattedPlaces: Place[] = data.elements
+                 .filter((el: any) => el.lat && el.lon)
+                 .map((el: any) => {
+                     let category: Place["category"] = "restaurant";
+                     if (el.tags.amenity === "hospital") category = "hospital";
+                     else if (el.tags.tourism) category = "hotel";
+                     else if (el.tags.leisure === "park") category = "park";
+                     else if (el.tags.shop === "mall") category = "mall";
 
-            setPlaces(formattedPlaces);
-        } catch (err) {
-            setError("Error fetching nearby places. Please try again later.");
-        } finally {
-            setLoading(false);
-        }
-    };
+                     return {
+                         id: el.id,
+                         lat: el.lat,
+                         lon: el.lon,
+                         name: el.tags.name || el.tags.operator || "Unnamed Place",
+                         type: el.tags.amenity || el.tags.tourism || el.tags.leisure || el.tags.shop || "Place",
+                         category,
+                     };
+                 });
+
+             setPlaces(formattedPlaces);
+         } catch (err) {
+             const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+             logger.error("Nearby places fetch error:", errorMessage);
+             setError(`Error fetching nearby places. ${errorMessage}. Please try again later.`);
+         } finally {
+             setLoading(false);
+         }
+     };
 
     const filteredPlaces = (activeCategory && showNearby)
         ? places.filter(p => p.category === activeCategory)
