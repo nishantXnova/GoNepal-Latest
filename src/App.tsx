@@ -34,6 +34,8 @@ const Terms = lazy(() => import("@/pages/Terms"));
 const SharedItinerary = lazy(() => import("@/pages/SharedItinerary"));
 const FieldInterview = lazy(() => import("@/pages/FieldInterview"));
 const Reviews = lazy(() => import("@/pages/Reviews"));
+const Help = lazy(() => import("@/pages/Help"));
+const Developers = lazy(() => import("@/pages/Developers"));
 
 // Guide & Admin Routes
 const KYC = lazy(() => import("@/pages/guide/KYC"));
@@ -93,6 +95,8 @@ const AnimatedRoutes = () => {
           <Route path="/trails" element={<Trails />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/developers" element={<Developers />} />
           <Route path="/itinerary/:id" element={<SharedItinerary />} />
           <Route path="/field-interview" element={<FieldInterview />} />
           <Route path="/reviews" element={<Reviews />} />
